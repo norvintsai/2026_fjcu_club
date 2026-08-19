@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { isAdminAuthenticated } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
-import { CLUB_RESULTS } from '@/lib/results'
 import LogoutButton from './LogoutButton'
+import DashboardCharts from './DashboardCharts'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,162 +19,129 @@ export default async function DashboardPage() {
 
   const rows = (submissions ?? []) as Submission[]
 
-  const resultDist: Record<string, number> = {}
-  for (const s of rows) {
-    resultDist[s.result] = (resultDist[s.result] ?? 0) + 1
+  // ── KPI ──────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10)
+  const todayCount = rows.filter(r => r.created_at.slice(0, 10) === today).length
+
+  // ── 社團屬性分佈 ──────────────────────────────────────
+  const clubMap: Record<string, number> = {}
+  for (const s of rows) clubMap[s.result] = (clubMap[s.result] ?? 0) + 1
+  const clubDist = Object.entries(clubMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, value]) => ({
+      name,
+      value,
+      pct: rows.length > 0 ? Math.round(value / rows.length * 100) : 0,
+    }))
+
+  // ── 每日趨勢（近 14 天）──────────────────────────────
+  const dailyMap: Record<string, number> = {}
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    dailyMap[d.toISOString().slice(0, 10)] = 0
   }
-  const resultEntries = Object.entries(resultDist).sort(([, a], [, b]) => b - a)
+  for (const s of rows) {
+    const date = s.created_at.slice(0, 10)
+    if (date in dailyMap) dailyMap[date] = (dailyMap[date] ?? 0) + 1
+  }
+  const dailyTrend = Object.entries(dailyMap).map(([date, count]) => ({
+    date: date.slice(5),
+    人數: count,
+  }))
+
+  // ── 系所排名 ─────────────────────────────────────────
+  // department format: "系所名 部別 年級"  e.g. "資訊工程學系 日間部 大三"
+  const deptMap: Record<string, number> = {}
+  const gradeMap: Record<string, number> = {}
+  const divMap: Record<string, number> = {}
+
+  for (const s of rows) {
+    const parts = s.department.split(' ')
+    const dept  = parts[0] ?? s.department
+    const div   = parts.length >= 3 ? parts[1] : (parts.length === 2 ? parts[0] : '其他')
+    const grade = parts[parts.length - 1]
+
+    deptMap[dept]   = (deptMap[dept] ?? 0) + 1
+    gradeMap[grade] = (gradeMap[grade] ?? 0) + 1
+    divMap[div]     = (divMap[div] ?? 0) + 1
+  }
+
+  const topDepts = Object.entries(deptMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([name, value]) => ({ name, 人數: value }))
+
+  const gradeOrder = ['大一', '大二', '大三', '大四', '大五', '大六']
+  const gradeDist = gradeOrder
+    .filter(g => g in gradeMap)
+    .map(g => ({ grade: g, 人數: gradeMap[g] }))
+
+  const divisionDist = Object.entries(divMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, value]) => ({ name, value }))
+
+  // ── 結果表格 ─────────────────────────────────────────
+  const recentRows = rows.map(s => {
+    const parts = s.department.split(' ')
+    return {
+      id:         s.id,
+      student_id: s.student_id,
+      dept:       parts[0] ?? s.department,
+      division:   parts.length >= 3 ? parts[1] : '',
+      grade:      parts[parts.length - 1] ?? '',
+      result:     s.result,
+      created_at: s.created_at,
+    }
+  })
 
   return (
-    <main className="min-h-screen cyber-grid px-4 py-8 relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute top-0 left-0 w-96 h-96 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(0,212,255,.05) 0%, transparent 70%)' }} />
+    <main className="min-h-screen cyber-grid px-4 py-8 relative">
+      <div className="absolute top-0 left-0 w-80 h-80 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(0,212,255,.04) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-0 right-0 w-80 h-80 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(255,0,255,.03) 0%, transparent 70%)' }} />
 
-      <div className="max-w-5xl mx-auto relative z-10">
+      <div className="max-w-6xl mx-auto relative z-10">
 
-        {/* ── Top bar ── */}
-        <div className="flex items-center justify-between mb-6">
+        {/* ── 頂部 header ── */}
+        <div className="flex items-start justify-between mb-8">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1.5">
               <span className="w-2 h-2 rounded-full bg-neon neon-pulse" />
-              <h1 className="font-orbitron font-black text-lg uppercase tracking-widest text-fore">
-                Command Center
+              <h1 className="font-orbitron font-black text-xl uppercase tracking-widest text-fore">
+                資料分析中心
               </h1>
             </div>
-            <p className="text-dim text-xs font-orbitron tracking-wider ml-5">
-              // TOTAL CREW SCANNED: {String(rows.length).padStart(4, '0')}
+            <p className="text-xs font-orbitron tracking-[.15em] ml-5" style={{ color: '#4a4a6a' }}>
+              FJU STELLAR · 社團適性測驗 · 即時數據儀表板
             </p>
           </div>
-          <LogoutButton />
-        </div>
-
-        {/* ── Stats row ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {[
-            { label: 'Total Scans', value: rows.length, color: '#00ff88' },
-            { label: 'Club Types', value: resultEntries.length, color: '#00d4ff' },
-            { label: 'Top Planet', value: resultEntries[0]?.[0] ?? '—', color: '#ff00ff', small: true },
-            { label: 'Latest', value: rows[0] ? new Date(rows[0].created_at).toLocaleDateString('zh-TW') : '—', color: '#ffd700', small: true },
-          ].map(stat => (
-            <div key={stat.label} className="terminal-card cyber-chamfer-sm p-4">
-              <p className="text-dim text-xs font-orbitron tracking-widest uppercase mb-2">{stat.label}</p>
-              <p
-                className={`font-orbitron font-bold ${stat.small ? 'text-sm' : 'text-2xl'} leading-tight`}
-                style={{ color: stat.color, textShadow: `0 0 10px ${stat.color}60` }}
-              >
-                {String(stat.value)}
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs font-orbitron tracking-wider" style={{ color: '#4a4a6a' }}>
+                更新時間
+              </p>
+              <p className="text-xs font-orbitron text-neon">
+                {new Date().toLocaleString('zh-TW')}
               </p>
             </div>
-          ))}
-        </div>
-
-        {/* ── Result distribution ── */}
-        <div className="terminal-card cyber-chamfer mb-6">
-          <div className="terminal-header">
-            <span className="terminal-dot" style={{ background: '#00ff88' }} />
-            <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
-              Planet Distribution
-            </span>
-            <span className="ml-auto text-dim text-xs">{rows.length} records</span>
-          </div>
-          <div className="p-6">
-            {resultEntries.length === 0 ? (
-              <p className="text-dim text-xs font-orbitron tracking-wider cyber-cursor">AWAITING DATA</p>
-            ) : (
-              <div className="space-y-4">
-                {resultEntries.map(([result, count], idx) => {
-                  const pct = rows.length > 0 ? Math.round((count / rows.length) * 100) : 0
-                  const clubInfo = CLUB_RESULTS[result]
-                  const isTop = idx === 0
-                  return (
-                    <div key={result}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{clubInfo?.emoji}</span>
-                          <span className={`text-xs font-orbitron tracking-wider ${isTop ? 'text-neon' : 'text-dim'}`}>
-                            {result}
-                          </span>
-                          {isTop && (
-                            <span className="text-[10px] font-orbitron text-neon border border-neon px-1 py-0.5 cyber-chamfer-sm">
-                              TOP
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs font-orbitron">
-                          <span className="text-dim">{count} CREW</span>
-                          <span className={isTop ? 'text-neon' : 'text-dim'}>{pct}%</span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 bg-border relative overflow-hidden cyber-chamfer-sm">
-                        <div
-                          className="absolute inset-y-0 left-0 transition-all duration-700"
-                          style={{
-                            width: `${pct}%`,
-                            background: isTop ? '#00ff88' : '#2a2a4a',
-                            boxShadow: isTop ? '0 0 6px #00ff88' : 'none',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            <LogoutButton />
           </div>
         </div>
 
-        {/* ── Crew log table ── */}
-        <div className="terminal-card cyber-chamfer overflow-hidden">
-          <div className="terminal-header">
-            <span className="terminal-dot" style={{ background: '#00d4ff' }} />
-            <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
-              Crew Scan Log
-            </span>
-          </div>
-
-          {rows.length === 0 ? (
-            <p className="text-dim text-xs font-orbitron tracking-wider px-6 py-8 cyber-cursor">
-              AWAITING CREW DATA
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border">
-                    {['Student ID', 'Department', 'Destination', 'Timestamp'].map(h => (
-                      <th key={h} className="px-5 py-3 text-left text-dim font-orbitron uppercase tracking-widest">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((s, idx) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-border transition-colors"
-                      style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,.015)' }}
-                    >
-                      <td className="px-5 py-3 text-fore font-orbitron">{s.student_id}</td>
-                      <td className="px-5 py-3 text-dim">{s.department}</td>
-                      <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-neon font-orbitron">
-                          <span>{CLUB_RESULTS[s.result]?.emoji}</span>
-                          <span>{s.result}</span>
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-dim">
-                        {new Date(s.created_at).toLocaleString('zh-TW')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
+        <DashboardCharts
+          total={rows.length}
+          todayCount={todayCount}
+          topClub={clubDist[0]?.name ?? ''}
+          deptCount={Object.keys(deptMap).length}
+          clubDist={clubDist}
+          dailyTrend={dailyTrend}
+          topDepts={topDepts}
+          gradeDist={gradeDist}
+          divisionDist={divisionDist}
+          recentRows={recentRows}
+        />
       </div>
     </main>
   )
