@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { ClubResult } from '@/lib/results'
+import ClubIcon from '@/components/ClubIcon'
 
 interface Props {
   result: ClubResult
@@ -128,7 +129,7 @@ export default function ShareCard({ result, nickname, department }: Props) {
               ▸ 星際任務報告
             </div>
 
-            {/* Emoji with orbital rings */}
+            {/* Club icon with orbital rings */}
             <div style={{ position: 'relative', marginBottom: 22, width: 130, height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{
                 position: 'absolute', inset: 0, borderRadius: '50%',
@@ -143,7 +144,9 @@ export default function ShareCard({ result, nickname, department }: Props) {
                 position: 'absolute', width: 66, height: 66, borderRadius: '50%',
                 border: '1px dashed rgba(0,255,136,.10)',
               }} />
-              <div style={{ fontSize: 50, lineHeight: 1, position: 'relative', zIndex: 1 }}>{result.emoji}</div>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <ClubIcon category={result.title} size={62} />
+              </div>
             </div>
 
             <div style={{ fontSize: 9, color: '#4a4a6a', letterSpacing: '0.22em', fontFamily: '"Orbitron", monospace', marginBottom: 8 }}>

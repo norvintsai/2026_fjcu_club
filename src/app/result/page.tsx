@@ -7,6 +7,7 @@ import { Submission } from '@/lib/database.types'
 import { CLUB_RESULTS } from '@/lib/results'
 import Danmaku from '@/components/Danmaku'
 import ShareCard from '@/components/ShareCard'
+import ClubIcon from '@/components/ClubIcon'
 
 function ResultContent() {
   const searchParams = useSearchParams()
@@ -87,7 +88,9 @@ function ResultContent() {
             </div>
 
             <div className="p-8 text-center relative z-10">
-              <div className="text-5xl mb-4">{clubInfo?.emoji ?? '🌌'}</div>
+              <div className="mb-4 flex justify-center">
+                <ClubIcon category={submission.result} size={72} />
+              </div>
               <p className="text-dim text-xs font-orbitron tracking-[.25em] uppercase mb-3">你的星球</p>
               <h2 className="font-orbitron font-black text-2xl md:text-3xl tracking-widest text-neon text-neon-glow mb-6">
                 {submission.result}
@@ -168,8 +171,9 @@ function ResultContent() {
                 return (
                   <div key={category} style={{ animationDelay: `${idx * 80}ms` }}>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className={`text-xs font-orbitron tracking-wider ${isTop ? 'text-neon' : 'text-dim'}`}>
-                        {cd?.emoji} {category}
+                      <span className={`text-xs font-orbitron tracking-wider flex items-center gap-1.5 ${isTop ? 'text-neon' : 'text-dim'}`}>
+                        <ClubIcon category={category} size={16} />
+                        {category}
                       </span>
                       <span className={`text-xs font-orbitron ${isTop ? 'text-neon' : 'text-dim'}`}>
                         {score} / {total} 分
