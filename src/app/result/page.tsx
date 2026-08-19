@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
 import { CLUB_RESULTS } from '@/lib/results'
 
@@ -16,16 +15,14 @@ function ResultContent() {
 
   useEffect(() => {
     if (!id) { setError('找不到測驗紀錄'); setLoading(false); return }
-    supabase
-      .from('submissions')
-      .select('*')
-      .eq('id', id)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) setError('// ERROR: 找不到任務紀錄')
-        else setSubmission(data as unknown as Submission)
+    fetch(`/api/result?id=${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) setError('// ERROR: 找不到任務紀錄')
+        else setSubmission(data as Submission)
         setLoading(false)
       })
+      .catch(() => { setError('// ERROR: 找不到任務紀錄'); setLoading(false) })
   }, [id])
 
   if (loading) return (
