@@ -9,6 +9,7 @@ import { CLUB_RESULTS } from '@/lib/results'
 function ResultContent() {
   const searchParams = useSearchParams()
   const id = searchParams.get('id') ?? ''
+  const nickname = searchParams.get('nickname') ?? ''
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -102,13 +103,15 @@ function ResultContent() {
             </p>
 
             {/* Crew info */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {nickname && (
+                <>
+                  <span className="text-xs text-neon font-orbitron">{nickname}</span>
+                  <span className="text-border">|</span>
+                </>
+              )}
               <span className="text-xs text-dim font-orbitron">
                 {submission.department}
-              </span>
-              <span className="text-border">|</span>
-              <span className="text-xs text-dim font-orbitron">
-                ID: {submission.student_id}
               </span>
             </div>
           </div>

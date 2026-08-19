@@ -10,6 +10,7 @@ function TestContent() {
   const searchParams = useSearchParams()
   const studentId = searchParams.get('studentId') ?? ''
   const department = searchParams.get('department') ?? ''
+  const nickname = searchParams.get('nickname') ?? ''
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -50,7 +51,9 @@ function TestContent() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      router.push(`/result?id=${data.id}`)
+      const resultParams = new URLSearchParams({ id: data.id })
+      if (nickname) resultParams.set('nickname', nickname)
+      router.push(`/result?${resultParams.toString()}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '// ERROR: 提交失敗')
       setSubmitting(false)
