@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
+import { CLUB_RESULTS } from '@/lib/results'
 
 function ResultContent() {
   const searchParams = useSearchParams()
@@ -26,7 +27,7 @@ function ResultContent() {
       .single()
       .then(({ data, error }) => {
         if (error || !data) setError('找不到測驗紀錄')
-        else setSubmission(data as Submission)
+        else setSubmission(data as unknown as Submission)
         setLoading(false)
       })
   }, [id])
@@ -50,15 +51,25 @@ function ResultContent() {
     )
   }
 
+  const clubInfo = CLUB_RESULTS[submission.result]
   const scoreEntries = Object.entries(submission.scores).sort(([, a], [, b]) => b - a)
+  const total = scoreEntries.reduce((sum, [, s]) => sum + s, 0)
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="max-w-md mx-auto">
+        {/* Result Card */}
         <div className="bg-white rounded-2xl shadow p-8 text-center mb-4">
-          <p className="text-sm text-gray-500 mb-1">測驗結果</p>
-          <h2 className="text-3xl font-bold text-blue-600 mb-4">{submission.result}</h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-4xl mb-3">{clubInfo?.emoji ?? '🌌'}</p>
+          <p className="text-xs text-gray-400 mb-1">你的社團適性結果</p>
+          <h2 className="text-2xl font-bold text-blue-600 mb-4">
+            {submission.result}
+          </h2>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {clubInfo?.description ?? submission.result}
+          </p>
+          <hr className="my-5 border-gray-100" />
+          <p className="text-xs text-gray-400">
             {submission.department}・{submission.student_id}
           </p>
         </div>
@@ -68,17 +79,21 @@ function ResultContent() {
           <h3 className="text-sm font-semibold text-gray-700 mb-4">各類別得分</h3>
           <div className="space-y-3">
             {scoreEntries.map(([category, score]) => {
-              const total = scoreEntries.reduce((sum, [, s]) => sum + s, 0)
               const pct = total > 0 ? Math.round((score / total) * 100) : 0
+              const isTop = category === submission.result
               return (
                 <div key={category}>
-                  <div className="flex justify-between text-sm text-gray-600 mb-1">
-                    <span>{category}</span>
-                    <span>{score} 題（{pct}%）</span>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className={isTop ? 'font-semibold text-blue-600' : 'text-gray-600'}>
+                      {CLUB_RESULTS[category]?.emoji} {category}
+                    </span>
+                    <span className={isTop ? 'text-blue-600 font-semibold' : 'text-gray-400'}>
+                      {score} 題（{pct}%）
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2">
                     <div
-                      className="bg-blue-400 h-2 rounded-full transition-all"
+                      className={`h-2 rounded-full transition-all ${isTop ? 'bg-blue-500' : 'bg-gray-300'}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
