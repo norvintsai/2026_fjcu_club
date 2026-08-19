@@ -18,9 +18,19 @@ export default function ShareCard({ result, nickname, department }: Props) {
     setBusy(true)
     try {
       const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
+      const blob = await fetch(dataUrl).then(r => r.blob())
+      const file = new File([blob], `fju-club-${result.title}.png`, { type: 'image/png' })
+
+      // Mobile: use native share sheet (iOS/Android) — allows "Save to Photos"
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'FJU STELLAR 社團適性測驗結果' })
+        return
+      }
+
+      // Desktop fallback: direct download
       const a = document.createElement('a')
       a.href = dataUrl
-      a.download = `fju-club-${result.title}.png`
+      a.download = file.name
       a.click()
     } finally {
       setBusy(false)

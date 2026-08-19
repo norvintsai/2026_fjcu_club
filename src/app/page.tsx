@@ -9,12 +9,6 @@ type Step = 'id' | 'returning' | 'confirm'
 
 interface PrevSub { id: string; result: string; department: string; created_at: string }
 
-const STATUS_METRICS = [
-  { label: '網路', value: '已連線' },
-  { label: '資料庫', value: '上線' },
-  { label: '測驗模組', value: '就緒' },
-  { label: '系統', value: '正常' },
-]
 
 export default function HomePage() {
   const router = useRouter()
@@ -84,15 +78,55 @@ export default function HomePage() {
             <span className="text-neon text-xs font-orbitron tracking-wider">SYS-OK</span>
           </div>
 
-          {/* Status metrics */}
-          <div className="flex items-center gap-2 px-5 py-2.5 border-b border-border flex-wrap">
-            {STATUS_METRICS.map(m => (
-              <div key={m.label} className="flex items-center gap-1.5 metric-badge cyber-chamfer-sm">
-                <span className="dot-green neon-pulse" />
-                <span className="text-dim">{m.label}</span>
-                <span className="text-neon">{m.value}</span>
+          {/* Cockpit instrument strip */}
+          <div className="flex items-center gap-0 px-5 py-2.5 border-b border-border overflow-hidden">
+            <div className="flex items-center gap-4 flex-1 flex-wrap">
+              {/* Engine output */}
+              <div className="flex flex-col gap-0.5 min-w-[72px]">
+                <span className="text-dim font-orbitron" style={{ fontSize: 8, letterSpacing: '0.12em' }}>引擎輸出</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex gap-px">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="w-1.5 h-2.5 rounded-sm"
+                        style={{ background: i <= 4 ? '#00ff88' : '#2a2a4a', boxShadow: i <= 4 ? '0 0 4px #00ff88' : 'none' }} />
+                    ))}
+                  </div>
+                  <span className="text-neon font-orbitron" style={{ fontSize: 9 }}>82%</span>
+                </div>
               </div>
-            ))}
+
+              <div className="w-px h-6 bg-border shrink-0" />
+
+              {/* Shield */}
+              <div className="flex flex-col gap-0.5 min-w-[72px]">
+                <span className="text-dim font-orbitron" style={{ fontSize: 8, letterSpacing: '0.12em' }}>護盾強度</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex gap-px">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="w-1.5 h-2.5 rounded-sm"
+                        style={{ background: i <= 5 ? '#00d4ff' : '#2a2a4a', boxShadow: i <= 5 ? '0 0 4px #00d4ff' : 'none' }} />
+                    ))}
+                  </div>
+                  <span className="font-orbitron" style={{ fontSize: 9, color: '#00d4ff' }}>MAX</span>
+                </div>
+              </div>
+
+              <div className="w-px h-6 bg-border shrink-0" />
+
+              {/* Nav coordinates */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-dim font-orbitron" style={{ fontSize: 8, letterSpacing: '0.12em' }}>航行座標</span>
+                <span className="font-orbitron" style={{ fontSize: 9, color: '#ffd700', letterSpacing: '0.08em' }}>
+                  25°N · 121°E
+                </span>
+              </div>
+            </div>
+
+            {/* Status dot */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="dot-green neon-pulse" />
+              <span className="text-neon font-orbitron" style={{ fontSize: 8, letterSpacing: '0.12em' }}>飛行就緒</span>
+            </div>
           </div>
 
           <div className="p-7">
