@@ -33,6 +33,24 @@ CREATE POLICY "Anyone can insert submissions"
 CREATE POLICY "Service role reads submissions"
   ON submissions FOR SELECT USING (auth.role() = 'service_role');
 
+-- 彈幕留言表
+CREATE TABLE IF NOT EXISTS messages (
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  content         TEXT NOT NULL,
+  result_category TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read messages"
+  ON messages FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can insert messages"
+  ON messages FOR INSERT WITH CHECK (
+    char_length(content) >= 1 AND char_length(content) <= 20
+  );
+
 -- ============================================================
 -- 正式題目
 -- ============================================================

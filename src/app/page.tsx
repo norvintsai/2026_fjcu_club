@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { parseStudentId, type ParsedStudentId } from '@/lib/student-id'
+import { checkProfanity } from '@/lib/profanity'
 
-type Step = 'id' | 'confirm'
+type Step = 'id' | 'returning' | 'confirm'
+
+interface PrevSub { id: string; result: string; department: string; created_at: string }
 
 const STATUS_METRICS = [
   { label: '網路', value: '已連線' },
@@ -18,10 +21,12 @@ export default function HomePage() {
   const [step, setStep]           = useState<Step>('id')
   const [studentId, setStudentId] = useState('')
   const [parsed, setParsed]       = useState<ParsedStudentId | null>(null)
+  const [prevSub, setPrevSub]     = useState<PrevSub | null>(null)
   const [nickname, setNickname]   = useState('')
   const [error, setError]         = useState('')
+  const [checking, setChecking]   = useState(false)
 
-  function handleIdSubmit(e: React.FormEvent) {
+  async function handleIdSubmit(e: React.FormEvent) {
     e.preventDefault()
     const id = studentId.trim()
     const result = parseStudentId(id)
@@ -31,12 +36,27 @@ export default function HomePage() {
     }
     setParsed(result)
     setError('')
-    setStep('confirm')
+    setChecking(true)
+    try {
+      const res = await fetch(`/api/check-student?studentId=${id}`)
+      const data = await res.json()
+      if (data.found) {
+        setPrevSub(data.submission)
+        setStep('returning')
+      } else {
+        setStep('confirm')
+      }
+    } catch {
+      setStep('confirm')
+    } finally {
+      setChecking(false)
+    }
   }
 
   function handleLaunch(e: React.FormEvent) {
     e.preventDefault()
     if (!nickname.trim()) { setError('// 請輸入你的暱稱'); return }
+    if (checkProfanity(nickname)) { setError('// 暱稱含有不適當字詞，請重新輸入'); return }
     const params = new URLSearchParams({
       studentId: studentId.trim(),
       department: parsed!.label,
@@ -47,18 +67,13 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen cyber-grid flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Ambient glows */}
       <div className="absolute top-0 left-0 w-96 h-96 pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,255,136,.06) 0%, transparent 70%)' }} />
       <div className="absolute bottom-0 right-0 w-96 h-96 pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,212,255,.05) 0%, transparent 70%)' }} />
 
       <div className="w-full max-w-lg relative z-10 fade-in-up">
-
-        {/* ── Main terminal card ── */}
         <div className="terminal-card cyber-chamfer panel-scan">
-
-          {/* Window chrome */}
           <div className="terminal-header">
             <span className="terminal-dot" style={{ background: '#ff3366' }} />
             <span className="terminal-dot" style={{ background: '#ffd700' }} />
@@ -69,7 +84,7 @@ export default function HomePage() {
             <span className="text-neon text-xs font-orbitron tracking-wider">SYS-OK</span>
           </div>
 
-          {/* System metrics bar */}
+          {/* Status metrics */}
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-border flex-wrap">
             {STATUS_METRICS.map(m => (
               <div key={m.label} className="flex items-center gap-1.5 metric-badge cyber-chamfer-sm">
@@ -80,10 +95,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Content */}
           <div className="p-7">
-
-            {/* Title block */}
             <div className="mb-7">
               <h1 className="font-orbitron font-black text-2xl md:text-3xl uppercase tracking-widest text-fore cyber-glitch leading-snug mb-2">
                 STELLAR<br />
@@ -95,11 +107,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Divider */}
             <div className="flex items-center gap-3 mb-6">
               <div className="flex-1 h-px bg-border" />
               <span className="text-dim text-xs font-orbitron tracking-widest">
-                {step === 'id' ? '第一步' : '第二步'}
+                {step === 'id' ? '第一步' : step === 'returning' ? '歡迎回來' : '第二步'}
               </span>
               <div className="flex-1 h-px bg-border" />
             </div>
@@ -133,7 +144,6 @@ export default function HomePage() {
 
                 {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
 
-                {/* Gauge showing input progress */}
                 <div>
                   <div className="gauge-track">
                     <div className="gauge-fill" style={{ width: `${(studentId.length / 9) * 100}%` }} />
@@ -147,32 +157,75 @@ export default function HomePage() {
                 <div className="pt-1">
                   <button
                     type="submit"
-                    disabled={studentId.length !== 9}
+                    disabled={studentId.length !== 9 || checking}
                     className="cyber-btn cyber-chamfer-sm w-full justify-center text-sm"
                   >
-                    <span>▶</span> 識別學號
+                    {checking
+                      ? <span className="cyber-cursor">識別中</span>
+                      : <><span>▶</span> 識別學號</>
+                    }
                   </button>
                 </div>
               </form>
             )}
 
+            {/* ── RETURNING: previous result found ── */}
+            {step === 'returning' && prevSub && parsed && (
+              <div className="space-y-4">
+                <div className="border cyber-chamfer-sm p-4"
+                  style={{ borderColor: '#ffd70050', background: 'rgba(255,215,0,.03)' }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="dot-amber" />
+                    <span className="text-xs font-orbitron tracking-wider" style={{ color: '#ffd700' }}>
+                      偵測到你的歷史紀錄
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-2 text-xs font-orbitron">
+                    <span className="text-dim">上次結果</span>
+                    <span className="text-neon font-bold">{prevSub.result}</span>
+                    <span className="text-dim">系級</span>
+                    <span className="text-fore text-xs leading-relaxed">{parsed.deptName} {parsed.grade}</span>
+                    <span className="text-dim">日期</span>
+                    <span className="text-dim">{new Date(prevSub.created_at).toLocaleDateString('zh-TW')}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => router.push(`/result?id=${prevSub.id}`)}
+                    className="cyber-btn-ghost cyber-chamfer-sm flex-1 justify-center text-xs"
+                  >
+                    查看上次結果
+                  </button>
+                  <button
+                    onClick={() => { setPrevSub(null); setStep('confirm') }}
+                    className="cyber-btn cyber-chamfer-sm flex-1 justify-center text-xs"
+                    style={{ borderColor: '#ffd700', color: '#ffd700' }}
+                  >
+                    <span>▶</span> 重新測驗
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => { setStep('id'); setError('') }}
+                  className="text-dim text-xs font-orbitron tracking-wider w-full text-center pt-1"
+                >
+                  ← 重新輸入學號
+                </button>
+              </div>
+            )}
+
             {/* ── STEP 2: Confirm + Nickname ── */}
             {step === 'confirm' && parsed && (
               <form onSubmit={handleLaunch} className="space-y-5">
-
-                {/* Detected info panel */}
                 <div className="border cyber-chamfer-sm relative overflow-hidden"
                   style={{ borderColor: '#00ff8850', background: 'rgba(0,255,136,.03)' }}>
-
-                  {/* Panel header */}
                   <div className="flex items-center gap-2 px-4 py-2 border-b"
                     style={{ borderColor: '#00ff8830', background: 'rgba(0,255,136,.05)' }}>
                     <span className="dot-green neon-pulse" />
                     <span className="text-neon text-xs font-orbitron tracking-[.2em] uppercase">訊號確認</span>
                     <span className="ml-auto text-dim text-xs font-orbitron">ID-{studentId}</span>
                   </div>
-
-                  {/* Info grid */}
                   <div className="px-4 py-4 grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 text-xs font-orbitron">
                     <span className="text-dim tracking-wider">部別</span>
                     <span className="text-fore">{parsed.division}</span>
@@ -183,7 +236,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Nickname */}
                 <div>
                   <label className="block text-xs text-dim font-orbitron uppercase tracking-[.15em] mb-2">
                     ▸ 艦員代號（暱稱）
@@ -224,7 +276,6 @@ export default function HomePage() {
               </form>
             )}
 
-            {/* Footer status */}
             <div className="mt-7 pt-5 border-t border-border flex items-center justify-between">
               <span className="text-dim text-xs">輔仁大學 ── 社團博覽會 2026</span>
               <div className="flex items-center gap-1.5">
@@ -233,9 +284,26 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* Student ID lookup link */}
+          <div className="px-7 pb-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-dim font-orbitron tracking-widest">學號查詢</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <p className="text-dim text-xs mb-2">不知道自己的學號？</p>
+            <a
+              href="https://smis.fju.edu.tw/DepartNew/query.aspx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cyber-btn-ghost cyber-chamfer-sm w-full justify-center text-xs"
+            >
+              🔍 前往輔大學號查詢系統
+            </a>
+          </div>
         </div>
 
-        {/* Corner accents */}
         <div className="absolute -top-px -left-px w-5 h-5 border-t-2 border-l-2 border-neon" />
         <div className="absolute -top-px -right-px w-5 h-5 border-t-2 border-r-2 border-neon" />
         <div className="absolute -bottom-px -left-px w-5 h-5 border-b-2 border-l-2 border-neon" />

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Question } from '@/lib/database.types'
+import SubmitAnimation from '@/components/SubmitAnimation'
 
 function TestContent() {
   const router = useRouter()
@@ -17,7 +18,8 @@ function TestContent() {
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [showAnim, setShowAnim]     = useState(false)
+  const [error, setError]           = useState('')
 
   useEffect(() => {
     if (!studentId || !department) { router.replace('/'); return }
@@ -43,18 +45,23 @@ function TestContent() {
       return
     }
     setSubmitting(true)
+    setShowAnim(true)
     try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, department, answers }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const [res] = await Promise.all([
+        fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, department, answers }),
+        }),
+        new Promise(r => setTimeout(r, 4000)),
+      ])
+      const data = await (res as Response).json()
+      if (!(res as Response).ok) throw new Error(data.error)
       const resultParams = new URLSearchParams({ id: data.id })
       if (nickname) resultParams.set('nickname', nickname)
       router.push(`/result?${resultParams.toString()}`)
     } catch (e: unknown) {
+      setShowAnim(false)
       setError(e instanceof Error ? e.message : '// ERROR: 提交失敗')
       setSubmitting(false)
     }
@@ -82,6 +89,8 @@ function TestContent() {
   const allAnswered = Object.keys(answers).length === questions.length
 
   return (
+    <>
+    <SubmitAnimation visible={showAnim} />
     <main className="min-h-screen cyber-grid flex flex-col px-4 py-8 relative overflow-hidden">
       {/* Ambient glows */}
       <div className="absolute top-0 right-0 w-80 h-80 pointer-events-none"
@@ -224,6 +233,7 @@ function TestContent() {
         </p>
       </div>
     </main>
+    </>
   )
 }
 

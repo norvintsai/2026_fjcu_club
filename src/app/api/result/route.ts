@@ -14,5 +14,10 @@ export async function GET(req: NextRequest) {
 
   if (error || !data) return NextResponse.json({ error: '找不到紀錄' }, { status: 404 })
 
-  return NextResponse.json(data)
+  const { count } = await supabase
+    .from('submissions')
+    .select('*', { count: 'exact', head: true })
+    .eq('result', data.result)
+
+  return NextResponse.json({ ...data, sameResultCount: count ?? 0 })
 }
