@@ -64,14 +64,14 @@ function TestContent() {
     <main className="min-h-screen cyber-grid flex items-center justify-center">
       <div className="text-center">
         <div className="w-2 h-2 bg-neon rounded-full inline-block neon-pulse mb-4" />
-        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">LOADING MISSION DATA</p>
+        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">載入測驗資料中</p>
       </div>
     </main>
   )
 
   if (questions.length === 0) return (
     <main className="min-h-screen flex items-center justify-center">
-      <p className="text-danger text-sm font-orbitron">{error || '// NO MISSION DATA FOUND'}</p>
+      <p className="text-danger text-sm font-orbitron">{error || '// 找不到測驗題目，請聯絡工作人員'}</p>
     </main>
   )
 
@@ -91,46 +91,51 @@ function TestContent() {
 
       <div className="max-w-2xl mx-auto w-full flex flex-col gap-4 relative z-10">
 
-        {/* ── Top HUD bar ── */}
-        <div className="terminal-card cyber-chamfer-sm px-5 py-3 flex items-center gap-4">
-          <span className="text-dim text-xs font-orbitron tracking-widest uppercase hidden sm:block">
-            Assessment
-          </span>
-          <div className="flex-1">
-            {/* Progress bar */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-border relative overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 bg-neon transition-all duration-500"
-                  style={{ width: `${progress}%`, boxShadow: '0 0 6px #00ff88' }}
-                />
+        {/* ── 艦員 HUD ── */}
+        <div className="terminal-card cyber-chamfer-sm">
+          <div className="px-4 py-2.5 flex items-center gap-3 flex-wrap">
+            {/* Callsign */}
+            {nickname && (
+              <div className="flex items-center gap-2">
+                <span className="dot-green neon-pulse" />
+                <span className="text-neon text-xs font-orbitron tracking-wider">{nickname}</span>
               </div>
-              <span className="text-neon text-xs font-orbitron tracking-wider whitespace-nowrap">
-                {progress}%
-              </span>
+            )}
+            {nickname && <span className="text-border text-xs">│</span>}
+            <span className="text-dim text-xs truncate max-w-[160px] sm:max-w-none">{department.split(' ').slice(0, 2).join(' ')}</span>
+            <div className="flex-1" />
+            {/* Progress */}
+            <div className="flex items-center gap-3 min-w-[140px]">
+              <div className="flex-1 gauge-track">
+                <div className="gauge-fill" style={{ width: `${progress}%` }} />
+              </div>
+              <span className="text-neon text-xs font-orbitron whitespace-nowrap">{progress}%</span>
             </div>
-          </div>
-          <div className="text-xs font-orbitron text-dim tracking-wider whitespace-nowrap">
-            <span className="text-fore">{String(current + 1).padStart(2, '0')}</span>
-            <span className="mx-1">/</span>
-            <span>{String(questions.length).padStart(2, '0')}</span>
+            <span className="text-xs font-orbitron text-dim whitespace-nowrap">
+              <span className="text-fore">{String(current + 1).padStart(2, '0')}</span>
+              <span className="mx-1 text-border">/</span>
+              <span>{String(questions.length).padStart(2, '0')}</span>
+              <span className="ml-1 text-dim">題</span>
+            </span>
           </div>
         </div>
 
-        {/* ── Question Card ── */}
-        <div className="terminal-card cyber-chamfer fade-in-up" key={current}>
-          {/* Header */}
+        {/* ── 題目卡片 ── */}
+        <div className="terminal-card cyber-chamfer fade-in-up panel-scan" key={current}>
           <div className="terminal-header">
             <span className="terminal-dot" style={{ background: '#ff3366' }} />
             <span className="terminal-dot" style={{ background: '#ffd700' }} />
             <span className="terminal-dot" style={{ background: '#00ff88' }} />
             <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
-              Mission Brief // Q-{String(current + 1).padStart(2, '0')}
+              任務說明 ── 第 {String(current + 1).padStart(2, '0')} 題
+            </span>
+            <span className="ml-auto text-xs font-orbitron" style={{ color: '#3a3a5a' }}>
+              {Object.keys(answers).length}/{questions.length} 已作答
             </span>
           </div>
 
-          <div className="p-6 md:p-8">
-            {/* Question */}
+          <div className="p-6 md:p-8 relative z-10">
+            {/* 題目 */}
             <p className="text-fore text-base md:text-lg leading-relaxed mb-8">
               <span className="text-cyan text-xs font-orbitron mr-2 opacity-60">
                 [{String(current + 1).padStart(2, '0')}]
@@ -138,7 +143,7 @@ function TestContent() {
               {q.content}
             </p>
 
-            {/* Options */}
+            {/* 選項 */}
             <div className="space-y-3">
               {q.options.map((option, idx) => {
                 const isSelected = selectedLabel === option.label
@@ -146,7 +151,7 @@ function TestContent() {
                   <button
                     key={option.label}
                     onClick={() => selectOption(option.label)}
-                    className="w-full text-left flex items-start gap-4 px-5 py-4 cyber-chamfer-sm border transition-all duration-150 group"
+                    className="w-full text-left flex items-start gap-4 px-5 py-4 cyber-chamfer-sm border transition-all duration-150"
                     style={{
                       background: isSelected ? 'rgba(0,255,136,.08)' : '#0a0a0f',
                       borderColor: isSelected ? '#00ff88' : '#2a2a3a',
@@ -164,10 +169,8 @@ function TestContent() {
                     >
                       {option.label}
                     </span>
-                    <span
-                      className="text-sm leading-relaxed flex-1"
-                      style={{ color: isSelected ? '#e0e0e0' : '#9a9aaa' }}
-                    >
+                    <span className="text-sm leading-relaxed flex-1"
+                      style={{ color: isSelected ? '#e0e0e0' : '#9a9aaa' }}>
                       {option.text}
                     </span>
                     {isSelected && (
@@ -184,14 +187,14 @@ function TestContent() {
           </div>
         </div>
 
-        {/* ── Navigation ── */}
+        {/* ── 導航按鈕 ── */}
         <div className="flex gap-3">
           <button
             onClick={() => setCurrent(c => c - 1)}
             disabled={current === 0}
             className="cyber-btn-ghost cyber-chamfer-sm flex-1 justify-center"
           >
-            ◀ PREV
+            ◀ 上一題
           </button>
 
           {isLast ? (
@@ -200,11 +203,10 @@ function TestContent() {
               disabled={submitting || !allAnswered}
               className="cyber-btn cyber-chamfer-sm flex-1 justify-center"
             >
-              {submitting ? (
-                <span className="cyber-cursor">TRANSMITTING</span>
-              ) : (
-                <><span>▶▶</span> SUBMIT MISSION</>
-              )}
+              {submitting
+                ? <span className="cyber-cursor">傳送中</span>
+                : <><span>▶▶</span> 送出答案</>
+              }
             </button>
           ) : (
             <button
@@ -212,14 +214,13 @@ function TestContent() {
               disabled={!selectedLabel}
               className="cyber-btn cyber-chamfer-sm flex-1 justify-center"
             >
-              NEXT ▶
+              下一題 ▶
             </button>
           )}
         </div>
 
-        {/* Answered count */}
         <p className="text-center text-dim text-xs font-orbitron tracking-wider">
-          LOGGED: {Object.keys(answers).length} / {questions.length} RESPONSES
+          已作答 {Object.keys(answers).length} / {questions.length} 題
         </p>
       </div>
     </main>
@@ -230,7 +231,7 @@ export default function TestPage() {
   return (
     <Suspense fallback={
       <main className="min-h-screen flex items-center justify-center cyber-grid">
-        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">INITIALIZING</p>
+        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">初始化中</p>
       </main>
     }>
       <TestContent />

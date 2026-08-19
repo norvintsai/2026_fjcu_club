@@ -30,7 +30,7 @@ function ResultContent() {
     <main className="min-h-screen cyber-grid flex items-center justify-center">
       <div className="text-center">
         <div className="w-2 h-2 bg-neon rounded-full inline-block neon-pulse mb-4" />
-        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">COMPUTING DESTINATION</p>
+        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">計算適性結果中</p>
       </div>
     </main>
   )
@@ -39,7 +39,7 @@ function ResultContent() {
     <main className="min-h-screen cyber-grid flex items-center justify-center px-4">
       <div className="text-center">
         <p className="text-danger text-sm font-orbitron mb-4">{error}</p>
-        <Link href="/" className="cyber-btn cyber-chamfer-sm text-xs">RETURN TO BASE</Link>
+        <Link href="/" className="cyber-btn cyber-chamfer-sm text-xs">返回首頁</Link>
       </div>
     </main>
   )
@@ -58,18 +58,17 @@ function ResultContent() {
 
       <div className="max-w-lg mx-auto w-full relative z-10 space-y-4">
 
-        {/* ── Nav lock header ── */}
+        {/* ── 確認 header ── */}
         <div className="terminal-card cyber-chamfer-sm px-5 py-3 flex items-center gap-3">
-          <span className="w-2 h-2 rounded-full bg-neon neon-pulse shrink-0" />
-          <span className="text-neon text-xs font-orbitron tracking-[.2em] uppercase">
-            Navigation Lock Confirmed
+          <span className="dot-green neon-pulse shrink-0" />
+          <span className="text-neon text-xs font-orbitron tracking-[.2em]">
+            目標星球確認
           </span>
           <span className="ml-auto text-dim text-xs">SYS-OK</span>
         </div>
 
-        {/* ── Result Card ── */}
-        <div className="terminal-card cyber-chamfer fade-in-up relative overflow-hidden">
-          {/* Decorative top line */}
+        {/* ── 結果卡片 ── */}
+        <div className="terminal-card cyber-chamfer fade-in-up relative overflow-hidden panel-scan">
           <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, transparent, #00ff88, transparent)' }} />
 
           <div className="terminal-header">
@@ -77,37 +76,33 @@ function ResultContent() {
             <span className="terminal-dot" style={{ background: '#ffd700' }} />
             <span className="terminal-dot" style={{ background: '#00ff88' }} />
             <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
-              Destination Planet
+              目標星球
             </span>
           </div>
 
-          <div className="p-8 text-center">
-            {/* Emoji */}
+          <div className="p-8 text-center relative z-10">
             <div className="text-5xl mb-4">{clubInfo?.emoji ?? '🌌'}</div>
 
-            {/* Label */}
             <p className="text-dim text-xs font-orbitron tracking-[.25em] uppercase mb-3">
-              Your Planet
+              你的星球
             </p>
 
-            {/* Club Name */}
             <div className="relative inline-block mb-6">
-              <h2 className="font-orbitron font-black text-2xl md:text-3xl uppercase tracking-widest text-neon text-neon-glow">
+              <h2 className="font-orbitron font-black text-2xl md:text-3xl tracking-widest text-neon text-neon-glow">
                 {submission.result}
               </h2>
             </div>
 
-            {/* Description */}
             <p className="text-sm text-fore leading-relaxed max-w-sm mx-auto mb-8">
               {clubInfo?.description}
             </p>
 
-            {/* Crew info */}
+            {/* 艦員資訊 */}
             <div className="flex items-center justify-center gap-3 flex-wrap">
               {nickname && (
                 <>
                   <span className="text-xs text-neon font-orbitron">{nickname}</span>
-                  <span className="text-border">|</span>
+                  <span className="text-border">│</span>
                 </>
               )}
               <span className="text-xs text-dim font-orbitron">
@@ -117,12 +112,12 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* ── Signal Analysis ── */}
+        {/* ── 適性分析 ── */}
         <div className="terminal-card cyber-chamfer fade-in-up" style={{ animationDelay: '.15s' }}>
           <div className="terminal-header">
             <span className="terminal-dot" style={{ background: '#00d4ff' }} />
             <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
-              Signal Analysis
+              適性分析
             </span>
           </div>
           <div className="p-6 space-y-4">
@@ -137,15 +132,15 @@ function ResultContent() {
                       {clubData?.emoji} {category}
                     </span>
                     <span className={`text-xs font-orbitron ${isTop ? 'text-neon' : 'text-dim'}`}>
-                      {String(score).padStart(2, '0')} / {String(total).padStart(2, '0')}
+                      {score} / {total} 分
                     </span>
                   </div>
-                  <div className="h-1.5 bg-border relative overflow-hidden cyber-chamfer-sm">
+                  <div className="gauge-track">
                     <div
-                      className="absolute inset-y-0 left-0 transition-all duration-700"
+                      className="h-full transition-all duration-700 absolute inset-y-0 left-0"
                       style={{
                         width: `${pct}%`,
-                        background: isTop ? '#00ff88' : '#2a2a4a',
+                        background: isTop ? 'linear-gradient(90deg, #00ff88, #00d4ff)' : '#2a2a4a',
                         boxShadow: isTop ? '0 0 6px #00ff88' : 'none',
                       }}
                     />
@@ -156,10 +151,10 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* ── Return button ── */}
+        {/* ── 返回按鈕 ── */}
         <div className="text-center pt-2">
           <Link href="/" className="cyber-btn-ghost cyber-chamfer-sm inline-flex items-center gap-2 text-xs">
-            ◀ RETURN TO BASE
+            ◀ 返回首頁
           </Link>
         </div>
       </div>
@@ -171,7 +166,7 @@ export default function ResultPage() {
   return (
     <Suspense fallback={
       <main className="min-h-screen cyber-grid flex items-center justify-center">
-        <p className="text-neon text-xs font-orbitron cyber-cursor">LOADING</p>
+        <p className="text-neon text-xs font-orbitron cyber-cursor">載入中</p>
       </main>
     }>
       <ResultContent />

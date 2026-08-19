@@ -242,11 +242,99 @@ body::after {
   box-shadow: 0 0 10px #ff3366;
 }
 
+/* ── Splash Animations ───────────────────────────────── */
+@keyframes splashFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+@keyframes bootLineIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scanBeam {
+  0%   { top: -4px; }
+  100% { top: 100%; }
+}
+
+@keyframes blinkText {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Dashboard / Panel Utilities ─────────────────────── */
+
+/* Moving scan line over a card */
+.panel-scan {
+  position: relative;
+  overflow: hidden;
+}
+.panel-scan::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 60px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0,255,136,.04) 50%,
+    transparent 100%
+  );
+  animation: panelSweep 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes panelSweep {
+  0%   { top: -60px; }
+  100% { top: calc(100% + 60px); }
+}
+
+/* Metric badge */
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: var(--font-jb), monospace;
+  color: #6b7280;
+}
+
+/* Status dot colours */
+.dot-green  { width: 6px; height: 6px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 5px #00ff88; flex-shrink: 0; }
+.dot-amber  { width: 6px; height: 6px; border-radius: 50%; background: #ffd700; box-shadow: 0 0 5px #ffd700; flex-shrink: 0; }
+.dot-red    { width: 6px; height: 6px; border-radius: 50%; background: #ff3366; box-shadow: 0 0 5px #ff3366; flex-shrink: 0; }
+
+/* Instrument gauge bar */
+.gauge-track {
+  height: 6px;
+  background: #1c1c2e;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+}
+.gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00d4ff);
+  box-shadow: 0 0 6px #00ff88;
+  transition: width 0.7s ease;
+}
+.gauge-fill-secondary {
+  height: 100%;
+  background: #2a2a4a;
+  transition: width 0.7s ease;
+}
+
 /* @media reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .cyber-glitch,
   .neon-pulse,
   .fade-in-up,
-  .slide-in { animation: none; }
+  .slide-in,
+  .panel-scan::after { animation: none; }
   .cyber-cursor::after { animation: none; }
 }
