@@ -15,86 +15,139 @@ function ResultContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!id) {
-      setError('找不到測驗紀錄')
-      setLoading(false)
-      return
-    }
+    if (!id) { setError('找不到測驗紀錄'); setLoading(false); return }
     supabase
       .from('submissions')
       .select('*')
       .eq('id', id)
       .single()
       .then(({ data, error }) => {
-        if (error || !data) setError('找不到測驗紀錄')
+        if (error || !data) setError('// ERROR: 找不到任務紀錄')
         else setSubmission(data as unknown as Submission)
         setLoading(false)
       })
   }, [id])
 
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">載入結果中…</p>
-      </main>
-    )
-  }
+  if (loading) return (
+    <main className="min-h-screen cyber-grid flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-2 h-2 bg-neon rounded-full inline-block neon-pulse mb-4" />
+        <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">COMPUTING DESTINATION</p>
+      </div>
+    </main>
+  )
 
-  if (error || !submission) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">{error}</p>
-          <Link href="/" className="text-blue-600 underline text-sm">回到首頁</Link>
-        </div>
-      </main>
-    )
-  }
+  if (error || !submission) return (
+    <main className="min-h-screen cyber-grid flex items-center justify-center px-4">
+      <div className="text-center">
+        <p className="text-danger text-sm font-orbitron mb-4">{error}</p>
+        <Link href="/" className="cyber-btn cyber-chamfer-sm text-xs">RETURN TO BASE</Link>
+      </div>
+    </main>
+  )
 
   const clubInfo = CLUB_RESULTS[submission.result]
   const scoreEntries = Object.entries(submission.scores).sort(([, a], [, b]) => b - a)
   const total = scoreEntries.reduce((sum, [, s]) => sum + s, 0)
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
-        {/* Result Card */}
-        <div className="bg-white rounded-2xl shadow p-8 text-center mb-4">
-          <p className="text-4xl mb-3">{clubInfo?.emoji ?? '🌌'}</p>
-          <p className="text-xs text-gray-400 mb-1">你的社團適性結果</p>
-          <h2 className="text-2xl font-bold text-blue-600 mb-4">
-            {submission.result}
-          </h2>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {clubInfo?.description ?? submission.result}
-          </p>
-          <hr className="my-5 border-gray-100" />
-          <p className="text-xs text-gray-400">
-            {submission.department}・{submission.student_id}
-          </p>
+    <main className="min-h-screen cyber-grid flex flex-col px-4 py-10 relative overflow-hidden">
+      {/* Ambient glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-64 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse, rgba(0,255,136,.08) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-0 right-0 w-80 h-80 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(255,0,255,.04) 0%, transparent 70%)' }} />
+
+      <div className="max-w-lg mx-auto w-full relative z-10 space-y-4">
+
+        {/* ── Nav lock header ── */}
+        <div className="terminal-card cyber-chamfer-sm px-5 py-3 flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-neon neon-pulse shrink-0" />
+          <span className="text-neon text-xs font-orbitron tracking-[.2em] uppercase">
+            Navigation Lock Confirmed
+          </span>
+          <span className="ml-auto text-dim text-xs">SYS-OK</span>
         </div>
 
-        {/* Score breakdown */}
-        <div className="bg-white rounded-2xl shadow p-6 mb-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">各類別得分</h3>
-          <div className="space-y-3">
-            {scoreEntries.map(([category, score]) => {
+        {/* ── Result Card ── */}
+        <div className="terminal-card cyber-chamfer fade-in-up relative overflow-hidden">
+          {/* Decorative top line */}
+          <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, transparent, #00ff88, transparent)' }} />
+
+          <div className="terminal-header">
+            <span className="terminal-dot" style={{ background: '#ff3366' }} />
+            <span className="terminal-dot" style={{ background: '#ffd700' }} />
+            <span className="terminal-dot" style={{ background: '#00ff88' }} />
+            <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
+              Destination Planet
+            </span>
+          </div>
+
+          <div className="p-8 text-center">
+            {/* Emoji */}
+            <div className="text-5xl mb-4">{clubInfo?.emoji ?? '🌌'}</div>
+
+            {/* Label */}
+            <p className="text-dim text-xs font-orbitron tracking-[.25em] uppercase mb-3">
+              Your Planet
+            </p>
+
+            {/* Club Name */}
+            <div className="relative inline-block mb-6">
+              <h2 className="font-orbitron font-black text-2xl md:text-3xl uppercase tracking-widest text-neon text-neon-glow">
+                {submission.result}
+              </h2>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-fore leading-relaxed max-w-sm mx-auto mb-8">
+              {clubInfo?.description}
+            </p>
+
+            {/* Crew info */}
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-xs text-dim font-orbitron">
+                {submission.department}
+              </span>
+              <span className="text-border">|</span>
+              <span className="text-xs text-dim font-orbitron">
+                ID: {submission.student_id}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Signal Analysis ── */}
+        <div className="terminal-card cyber-chamfer fade-in-up" style={{ animationDelay: '.15s' }}>
+          <div className="terminal-header">
+            <span className="terminal-dot" style={{ background: '#00d4ff' }} />
+            <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">
+              Signal Analysis
+            </span>
+          </div>
+          <div className="p-6 space-y-4">
+            {scoreEntries.map(([category, score], idx) => {
               const pct = total > 0 ? Math.round((score / total) * 100) : 0
               const isTop = category === submission.result
+              const clubData = CLUB_RESULTS[category]
               return (
-                <div key={category}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className={isTop ? 'font-semibold text-blue-600' : 'text-gray-600'}>
-                      {CLUB_RESULTS[category]?.emoji} {category}
+                <div key={category} style={{ animationDelay: `${idx * 80}ms` }}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className={`text-xs font-orbitron tracking-wider ${isTop ? 'text-neon' : 'text-dim'}`}>
+                      {clubData?.emoji} {category}
                     </span>
-                    <span className={isTop ? 'text-blue-600 font-semibold' : 'text-gray-400'}>
-                      {score} 題（{pct}%）
+                    <span className={`text-xs font-orbitron ${isTop ? 'text-neon' : 'text-dim'}`}>
+                      {String(score).padStart(2, '0')} / {String(total).padStart(2, '0')}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div className="h-1.5 bg-border relative overflow-hidden cyber-chamfer-sm">
                     <div
-                      className={`h-2 rounded-full transition-all ${isTop ? 'bg-blue-500' : 'bg-gray-300'}`}
-                      style={{ width: `${pct}%` }}
+                      className="absolute inset-y-0 left-0 transition-all duration-700"
+                      style={{
+                        width: `${pct}%`,
+                        background: isTop ? '#00ff88' : '#2a2a4a',
+                        boxShadow: isTop ? '0 0 6px #00ff88' : 'none',
+                      }}
                     />
                   </div>
                 </div>
@@ -103,12 +156,12 @@ function ResultContent() {
           </div>
         </div>
 
-        <Link
-          href="/"
-          className="block text-center text-sm text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          回到首頁
-        </Link>
+        {/* ── Return button ── */}
+        <div className="text-center pt-2">
+          <Link href="/" className="cyber-btn-ghost cyber-chamfer-sm inline-flex items-center gap-2 text-xs">
+            ◀ RETURN TO BASE
+          </Link>
+        </div>
       </div>
     </main>
   )
@@ -117,8 +170,8 @@ function ResultContent() {
 export default function ResultPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">載入中…</p>
+      <main className="min-h-screen cyber-grid flex items-center justify-center">
+        <p className="text-neon text-xs font-orbitron cyber-cursor">LOADING</p>
       </main>
     }>
       <ResultContent />
