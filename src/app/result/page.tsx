@@ -58,7 +58,7 @@ function ResultContent() {
 
   return (
     <>
-      <Danmaku category={submission.result} enabled={danmakuOn} />
+      <Danmaku category={submission.result} enabled={danmakuOn} onClose={() => setDanmakuOn(false)} />
 
       <main className="min-h-screen cyber-grid flex flex-col px-4 py-10 relative overflow-hidden"
         style={{ paddingBottom: danmakuOn ? 72 : undefined }}>

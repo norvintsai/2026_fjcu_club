@@ -6,11 +6,11 @@ const COLORS = ['#00ff88', '#00d4ff', '#ff00ff', '#ffd700', '#ff9966']
 
 interface FlyMsg { key: number; text: string; color: string; top: number; duration: number }
 
-interface Props { category: string; enabled: boolean }
+interface Props { category: string; enabled: boolean; onClose: () => void }
 
 let keyCounter = 0
 
-export default function Danmaku({ category, enabled }: Props) {
+export default function Danmaku({ category, enabled, onClose }: Props) {
   const [flying, setFlying]   = useState<FlyMsg[]>([])
   const [input, setInput]     = useState('')
   const [sending, setSending] = useState(false)
@@ -106,10 +106,10 @@ export default function Danmaku({ category, enabled }: Props) {
         ))}
       </div>
 
-      {/* Send input bar (fixed bottom) */}
+      {/* Input bar (fixed bottom) */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 101,
-        background: 'rgba(10,10,15,.92)',
+        background: 'rgba(10,10,15,.95)',
         borderTop: '1px solid #2a2a3a',
         padding: '10px 16px',
         display: 'flex', gap: 8, alignItems: 'center',
@@ -143,6 +143,18 @@ export default function Danmaku({ category, enabled }: Props) {
             發送
           </button>
         </form>
+        <button
+          onClick={onClose}
+          title="關閉彈幕"
+          style={{
+            background: 'transparent', border: '1px solid #ff3366',
+            color: '#ff3366', fontFamily: 'var(--font-orb), monospace',
+            fontSize: 12, padding: '6px 12px', cursor: 'pointer',
+            letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0,
+          }}
+        >
+          ✕
+        </button>
       </div>
 
       <style>{`
