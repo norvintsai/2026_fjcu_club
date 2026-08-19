@@ -102,9 +102,11 @@ function SectionCard({ title, dot = '#00ff88', children, action }: {
 }
 
 /* ─── Custom Donut label ─────────────────────────────── */
-function renderPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, pct, name }: {
-  cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; pct: number; name: string;
-}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function renderPieLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, pct } = props as {
+    cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; pct: number
+  }
   if (pct < 5) return null
   const RADIAN = Math.PI / 180
   const r = innerRadius + (outerRadius - innerRadius) * 0.5
