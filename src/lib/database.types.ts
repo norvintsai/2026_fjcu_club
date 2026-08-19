@@ -45,6 +45,25 @@ export interface Database {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          id: string
+          content: string
+          result_category: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          content: string
+          result_category?: string
+          created_at?: string
+        }
+        Update: {
+          content?: string
+          result_category?: string
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           id: string
