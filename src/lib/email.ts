@@ -7,7 +7,7 @@ function getResend() {
 }
 
 export async function sendOTPEmail(to: string, code: string, studentId: string) {
-  await getResend().emails.send({
+  const { error } = await getResend().emails.send({
     from: 'FJU STELLAR 後台 <onboarding@resend.dev>',
     to,
     subject: `【FJU STELLAR】登入驗證碼：${code}`,
@@ -45,4 +45,5 @@ export async function sendOTPEmail(to: string, code: string, studentId: string) 
       </div>
     `,
   })
+  if (error) throw new Error(`Resend 發信失敗：${error.message}`)
 }
