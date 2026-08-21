@@ -69,12 +69,12 @@ export default function HomePage() {
 
       <div className="w-full max-w-4xl relative z-10 fade-in-up flex flex-col lg:flex-row items-start gap-6 justify-center">
 
-      {/* ── Leaderboard (right column on desktop) ── */}
-      <div className="w-full lg:w-72 lg:order-2 shrink-0">
+      {/* ── Leaderboard (right column on desktop, bottom on mobile) ── */}
+      <div className="w-full lg:w-72 order-2 lg:order-2 shrink-0">
         <Leaderboard />
       </div>
 
-      <div className="w-full max-w-lg lg:order-1">
+      <div className="w-full max-w-lg order-1 lg:order-1">
         <div className="terminal-card cyber-chamfer panel-scan">
           <div className="terminal-header">
             <span className="terminal-dot" style={{ background: '#ff3366' }} />
