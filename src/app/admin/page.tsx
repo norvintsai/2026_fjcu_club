@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { OtpInput, type OtpInputHandle, type OtpStatus } from '@/components/ui/otp-input'
 
 type Step = 'id' | 'otp' | 'set-pin' | 'pin'
 
@@ -11,12 +12,25 @@ export default function AdminLoginPage() {
   const [step, setStep]           = useState<Step>('id')
   const [studentId, setStudentId] = useState('')
   const [maskedEmail, setMasked]  = useState('')
-  const [otp, setOtp]             = useState('')
-  const [pin, setPin]             = useState('')
-  const [pinConfirm, setConfirm]  = useState('')
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [countdown, setCountdown] = useState(0)
+
+  // OTP step
+  const otpRef    = useRef<OtpInputHandle>(null)
+  const [otpVal, setOtpVal]     = useState('')
+  const [otpStatus, setOtpStatus] = useState<OtpStatus>('idle')
+
+  // PIN step (login)
+  const pinRef    = useRef<OtpInputHandle>(null)
+  const [pinStatus, setPinStatus] = useState<OtpStatus>('idle')
+
+  // Set-PIN step
+  const setPinRef    = useRef<OtpInputHandle>(null)
+  const setPinCfmRef = useRef<OtpInputHandle>(null)
+  const [newPin, setNewPin]   = useState('')
+  const [cfmPin, setCfmPin]   = useState('')
+  const [setPinStatus, setSetPinStatus] = useState<OtpStatus>('idle')
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -52,7 +66,6 @@ export default function AdminLoginPage() {
       if (data.status === 'registered') {
         setStep('pin')
       } else {
-        // New user — auto-send OTP
         await doSendOtp()
         setStep('otp')
       }
@@ -79,6 +92,8 @@ export default function AdminLoginPage() {
   async function handleResendOtp() {
     setError('')
     setLoading(true)
+    otpRef.current?.clear()
+    setOtpStatus('idle')
     try {
       await doSendOtp()
     } catch (err) {
@@ -88,21 +103,28 @@ export default function AdminLoginPage() {
     }
   }
 
-  /* ── Step 2A: Verify OTP ── */
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault()
+  /* ── Step 2A: Verify OTP (auto on complete) ── */
+  async function handleVerifyOtp(code: string) {
     setError('')
     setLoading(true)
     try {
       const res  = await fetch('/api/admin/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, code: otp }),
+        body: JSON.stringify({ studentId, code }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
-      setStep('set-pin')
+      if (!res.ok) {
+        setOtpStatus('error')
+        setTimeout(() => { otpRef.current?.clear(); setOtpStatus('idle') }, 1400)
+        setError(data.error)
+        return
+      }
+      setOtpStatus('success')
+      setTimeout(() => setStep('set-pin'), 600)
     } catch {
+      setOtpStatus('error')
+      setTimeout(() => { otpRef.current?.clear(); setOtpStatus('idle') }, 1400)
       setError('連線失敗，請重試')
     } finally {
       setLoading(false)
@@ -110,21 +132,31 @@ export default function AdminLoginPage() {
   }
 
   /* ── Step 3: Set PIN ── */
-  async function handleSetPin(e: React.FormEvent) {
-    e.preventDefault()
-    if (!/^\d{6}$/.test(pin))       { setError('密碼必須為 6 位數字'); return }
-    if (pin !== pinConfirm)          { setError('兩次輸入的密碼不一致'); return }
+  async function handleSetPin() {
+    if (newPin.length !== 6) return
+    if (newPin !== cfmPin) {
+      setSetPinStatus('error')
+      setTimeout(() => { setPinCfmRef.current?.clear(); setCfmPin(''); setSetPinStatus('idle') }, 1400)
+      setError('兩次輸入的密碼不一致')
+      return
+    }
     setError('')
     setLoading(true)
     try {
       const res  = await fetch('/api/admin/auth/set-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ pin: newPin }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
-      router.push('/admin/dashboard')
+      if (!res.ok) {
+        setSetPinStatus('error')
+        setTimeout(() => setSetPinStatus('idle'), 1400)
+        setError(data.error)
+        return
+      }
+      setSetPinStatus('success')
+      setTimeout(() => router.push('/admin/dashboard'), 500)
     } catch {
       setError('連線失敗，請重試')
     } finally {
@@ -132,9 +164,8 @@ export default function AdminLoginPage() {
     }
   }
 
-  /* ── Step 2B: Login with PIN ── */
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
+  /* ── Step 2B: Login with PIN (auto on complete) ── */
+  async function handleLogin(pin: string) {
     setError('')
     setLoading(true)
     try {
@@ -144,9 +175,17 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ studentId, pin }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
-      router.push('/admin/dashboard')
+      if (!res.ok) {
+        setPinStatus('error')
+        setTimeout(() => { pinRef.current?.clear(); setPinStatus('idle') }, 1400)
+        setError(data.error)
+        return
+      }
+      setPinStatus('success')
+      setTimeout(() => router.push('/admin/dashboard'), 500)
     } catch {
+      setPinStatus('error')
+      setTimeout(() => { pinRef.current?.clear(); setPinStatus('idle') }, 1400)
       setError('連線失敗，請重試')
     } finally {
       setLoading(false)
@@ -263,48 +302,40 @@ export default function AdminLoginPage() {
 
             {/* ── STEP OTP ── */}
             {step === 'otp' && (
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <div className="space-y-5">
                 <div className="border cyber-chamfer-sm p-3 text-xs font-orbitron"
                   style={{ borderColor: '#ff336640', background: 'rgba(255,51,102,.03)', color: '#4a4a6a' }}>
                   <span className="block mb-1" style={{ color: '#ff3366' }}>▸ 驗證碼已寄送至</span>
                   <span style={{ color: '#c0c0d0' }}>{maskedEmail}</span>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-2"
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
                     style={{ color: '#4a4a6a' }}>
                     ▸ 輸入 6 位驗證碼
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none"
-                      style={{ color: '#ff3366' }}>&gt;</span>
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                      placeholder="000000"
-                      className="cyber-input cyber-chamfer-sm pl-8 tracking-[0.5em]"
-                      style={{ color: '#ff9999', fontSize: 18 }}
-                      inputMode="numeric" maxLength={6} autoFocus
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={otpRef}
+                      length={6}
+                      status={otpStatus}
+                      autoFocus
+                      disabled={loading}
+                      onChange={setOtpVal}
+                      onComplete={handleVerifyOtp}
+                      errorMessage="驗證碼錯誤或已過期"
+                      successMessage="驗證成功 ✓"
+                      hint={loading ? "驗證中..." : "輸入後自動送出"}
                     />
                   </div>
                 </div>
+
                 {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={otp.length !== 6 || loading}
-                  className="w-full py-3 font-orbitron text-xs font-bold tracking-[.15em] uppercase cyber-chamfer-sm transition-all"
-                  style={{
-                    background: 'transparent', border: '2px solid #ff3366', color: '#ff3366',
-                    opacity: otp.length !== 6 || loading ? .5 : 1,
-                    cursor:  otp.length !== 6 || loading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? <span className="cyber-cursor">驗證中</span> : '▶ 驗證'}
-                </button>
-                <div className="flex items-center justify-between">
+
+                <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
-                    onClick={() => { setStep('id'); setOtp(''); setError('') }}
+                    onClick={() => { setStep('id'); setOtpVal(''); setError(''); setOtpStatus('idle') }}
                     className="text-xs font-orbitron tracking-wider"
                     style={{ color: '#4a4a6a' }}
                   >
@@ -320,112 +351,95 @@ export default function AdminLoginPage() {
                     {countdown > 0 ? `重新寄送 (${countdown}s)` : '重新寄送驗證碼'}
                   </button>
                 </div>
-              </form>
+              </div>
             )}
 
             {/* ── STEP SET-PIN ── */}
             {step === 'set-pin' && (
-              <form onSubmit={handleSetPin} className="space-y-5">
+              <div className="space-y-6">
                 <p className="text-xs font-orbitron tracking-wider" style={{ color: '#6a6a8a' }}>
                   驗證成功。請設定你的 6 位數字登入密碼，之後登入時使用。
                 </p>
+
                 <div>
-                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-2"
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
                     style={{ color: '#4a4a6a' }}>▸ 設定密碼</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none"
-                      style={{ color: '#ff3366' }}>&gt;</span>
-                    <input
-                      type="password"
-                      value={pin}
-                      onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                      placeholder="6 位數字"
-                      className="cyber-input cyber-chamfer-sm pl-8 tracking-[0.5em]"
-                      style={{ color: '#ff9999' }}
-                      inputMode="numeric" maxLength={6} autoFocus
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={setPinRef}
+                      length={6}
+                      mask
+                      autoFocus
+                      disabled={loading}
+                      onChange={setNewPin}
+                      onComplete={() => setPinCfmRef.current?.focus()}
+                      hint="輸入後請繼續確認密碼"
                     />
                   </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-2"
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
                     style={{ color: '#4a4a6a' }}>▸ 確認密碼</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none"
-                      style={{ color: '#ff3366' }}>&gt;</span>
-                    <input
-                      type="password"
-                      value={pinConfirm}
-                      onChange={e => { setConfirm(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                      placeholder="6 位數字"
-                      className="cyber-input cyber-chamfer-sm pl-8 tracking-[0.5em]"
-                      style={{ color: '#ff9999' }}
-                      inputMode="numeric" maxLength={6}
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={setPinCfmRef}
+                      length={6}
+                      mask
+                      status={setPinStatus}
+                      disabled={loading}
+                      onChange={setCfmPin}
+                      onComplete={handleSetPin}
+                      errorMessage="兩次密碼不一致"
+                      successMessage="設定成功，正在登入..."
+                      hint="輸入後自動完成設定"
                     />
                   </div>
                 </div>
+
                 {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={pin.length !== 6 || pinConfirm.length !== 6 || loading}
-                  className="w-full py-3 font-orbitron text-xs font-bold tracking-[.15em] uppercase cyber-chamfer-sm transition-all"
-                  style={{
-                    background: 'transparent', border: '2px solid #ff3366', color: '#ff3366',
-                    opacity: pin.length !== 6 || pinConfirm.length !== 6 || loading ? .5 : 1,
-                    cursor:  pin.length !== 6 || pinConfirm.length !== 6 || loading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? <span className="cyber-cursor">處理中</span> : '▶ 設定並登入'}
-                </button>
-              </form>
+              </div>
             )}
 
             {/* ── STEP PIN (returning user) ── */}
             {step === 'pin' && (
-              <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-5">
                 <div className="border cyber-chamfer-sm p-3 text-xs font-orbitron"
                   style={{ borderColor: '#ff336640', background: 'rgba(255,51,102,.03)' }}>
                   <span style={{ color: '#4a4a6a' }}>學號：</span>
                   <span style={{ color: '#c0c0d0' }}>{studentId}</span>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-2"
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
                     style={{ color: '#4a4a6a' }}>▸ 6 位數字密碼</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none"
-                      style={{ color: '#ff3366' }}>&gt;</span>
-                    <input
-                      type="password"
-                      value={pin}
-                      onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                      placeholder="••••••"
-                      className="cyber-input cyber-chamfer-sm pl-8 tracking-[0.5em]"
-                      style={{ color: '#ff9999', fontSize: 18 }}
-                      inputMode="numeric" maxLength={6} autoFocus
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={pinRef}
+                      length={6}
+                      mask
+                      status={pinStatus}
+                      autoFocus
+                      disabled={loading}
+                      onComplete={handleLogin}
+                      errorMessage="密碼錯誤"
+                      successMessage="登入成功 ✓"
+                      hint={loading ? "驗證中..." : "輸入後自動登入"}
                     />
                   </div>
                 </div>
+
                 {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={pin.length !== 6 || loading}
-                  className="w-full py-3 font-orbitron text-xs font-bold tracking-[.15em] uppercase cyber-chamfer-sm transition-all"
-                  style={{
-                    background: 'transparent', border: '2px solid #ff3366', color: '#ff3366',
-                    opacity: pin.length !== 6 || loading ? .5 : 1,
-                    cursor:  pin.length !== 6 || loading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? <span className="cyber-cursor">登入中</span> : '▶ 登入'}
-                </button>
+
                 <button
                   type="button"
-                  onClick={() => { setStep('id'); setPin(''); setError('') }}
+                  onClick={() => { setStep('id'); setPinStatus('idle'); setError('') }}
                   className="w-full text-xs font-orbitron tracking-wider text-center"
                   style={{ color: '#4a4a6a' }}
                 >
                   ← 重新輸入學號
                 </button>
-              </form>
+              </div>
             )}
 
             <p className="text-center text-xs mt-8 font-orbitron tracking-wider" style={{ color: '#2a2a4a' }}>
