@@ -1,9 +1,13 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) throw new Error('RESEND_API_KEY 未設定')
+  return new Resend(key)
+}
 
 export async function sendOTPEmail(to: string, code: string, studentId: string) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: 'FJU STELLAR 後台 <onboarding@resend.dev>',
     to,
     subject: `【FJU STELLAR】登入驗證碼：${code}`,
