@@ -25,8 +25,55 @@ export async function setAdminSession() {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 8, // 8 hours
+    maxAge: 60 * 60 * 8,
   })
+}
+
+export async function setMemberSession(studentId: string) {
+  const cookieStore = await cookies()
+  const payload = `member:${studentId}:${Date.now()}`
+  cookieStore.set(COOKIE_NAME, sign(payload), {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 8,
+  })
+}
+
+export async function getAdminStudentId(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get(COOKIE_NAME)?.value
+  if (!raw) return null
+  const value = verify(raw)
+  if (!value?.startsWith('member:')) return null
+  return value.split(':')[1] ?? null
+}
+
+const OTP_PENDING_COOKIE = 'admin_otp_pending'
+
+export async function setOtpPendingSession(studentId: string) {
+  const cookieStore = await cookies()
+  const payload = `otp:${studentId}:${Date.now()}`
+  cookieStore.set(OTP_PENDING_COOKIE, sign(payload), {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 10, // 10 minutes
+  })
+}
+
+export async function getOtpPendingStudentId(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get(OTP_PENDING_COOKIE)?.value
+  if (!raw) return null
+  const value = verify(raw)
+  if (!value?.startsWith('otp:')) return null
+  return value.split(':')[1] ?? null
+}
+
+export async function clearOtpPendingSession() {
+  const cookieStore = await cookies()
+  cookieStore.delete(OTP_PENDING_COOKIE)
 }
 
 export async function clearAdminSession() {
