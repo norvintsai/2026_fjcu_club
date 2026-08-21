@@ -9,7 +9,7 @@ const RANK_COLORS = ['#ffd700', '#00d4ff', '#00ff88'] as const
 const RANK_LABELS = ['01', '02', '03'] as const
 const POLL_MS = 30_000
 
-type Tab = 'dept' | 'attr' | 'club'
+type Tab = 'dept' | 'attr'
 
 function EmptyState() {
   return (
@@ -85,9 +85,8 @@ function RankList({ items, max }: { items: Entry[]; max: number }) {
 }
 
 const TABS: { id: Tab; label: string; color: string }[] = [
-  { id: 'dept', label: '科系',   color: '#ffd700' },
-  { id: 'attr', label: '屬性',   color: '#00d4ff' },
-  { id: 'club', label: '社團總', color: '#00ff88' },
+  { id: 'dept', label: '科系排行', color: '#ffd700' },
+  { id: 'attr', label: '屬性排行', color: '#00d4ff' },
 ]
 
 export default function Leaderboard() {
@@ -118,11 +117,7 @@ export default function Leaderboard() {
     return () => clearInterval(t)
   }, [])
 
-  const current = tab === 'dept'
-    ? data?.depts ?? []
-    : tab === 'attr'
-      ? data?.categories ?? []
-      : data?.clubs ?? []
+  const current = tab === 'dept' ? data?.depts ?? [] : data?.categories ?? []
 
   const max = current[0]?.count ?? 0
 
