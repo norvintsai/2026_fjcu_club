@@ -1,14 +1,18 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY
-  if (!key) throw new Error('RESEND_API_KEY 未設定')
-  return new Resend(key)
+function getTransporter() {
+  const user = process.env.GMAIL_USER
+  const pass = process.env.GMAIL_APP_PASSWORD
+  if (!user || !pass) throw new Error('Gmail 環境變數未設定')
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  })
 }
 
 export async function sendOTPEmail(to: string, code: string, studentId: string) {
-  const { error } = await getResend().emails.send({
-    from: 'FJU STELLAR 後台 <onboarding@resend.dev>',
+  await getTransporter().sendMail({
+    from: `"FJU STELLAR 後台" <${process.env.GMAIL_USER}>`,
     to,
     subject: `【FJU STELLAR】登入驗證碼：${code}`,
     html: `
@@ -23,7 +27,7 @@ export async function sendOTPEmail(to: string, code: string, studentId: string) 
           你好，你的後台驗證碼如下。請在 <strong style="color:#ffd700;">10 分鐘</strong>內輸入，此碼只能使用一次。
         </p>
 
-        <div style="background:#0f0f1a;border:1px solid #00ff8840;padding:28px 24px;text-align:center;margin:0 0 28px;position:relative;">
+        <div style="background:#0f0f1a;border:1px solid #00ff8840;padding:28px 24px;text-align:center;margin:0 0 28px;">
           <p style="color:#4a4a6a;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;margin:0 0 12px;">驗證碼</p>
           <p style="color:#00ff88;font-size:40px;font-weight:900;letter-spacing:0.35em;margin:0;text-shadow:0 0 20px rgba(0,255,136,.4);">${code}</p>
         </div>
@@ -45,5 +49,4 @@ export async function sendOTPEmail(to: string, code: string, studentId: string) 
       </div>
     `,
   })
-  if (error) throw new Error(`Resend 發信失敗：${error.message}`)
 }
