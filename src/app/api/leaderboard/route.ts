@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase'
 
 export const revalidate = 30
 
 export async function GET() {
   try {
-    const { data } = await supabase
+    const { data } = await createServiceClient()
       .from('submissions')
       .select('department, result')
 
