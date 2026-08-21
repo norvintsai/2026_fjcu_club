@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { parseStudentId, type ParsedStudentId } from '@/lib/student-id'
 import { checkProfanity } from '@/lib/profanity'
+import Leaderboard from '@/components/Leaderboard'
 
 type Step = 'id' | 'returning' | 'confirm'
 
@@ -66,7 +67,14 @@ export default function HomePage() {
       <div className="absolute bottom-0 right-0 w-96 h-96 pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,212,255,.05) 0%, transparent 70%)' }} />
 
-      <div className="w-full max-w-lg relative z-10 fade-in-up">
+      <div className="w-full max-w-4xl relative z-10 fade-in-up flex flex-col lg:flex-row items-start gap-6 justify-center">
+
+      {/* ── Leaderboard (right column on desktop) ── */}
+      <div className="w-full lg:w-72 lg:order-2 shrink-0">
+        <Leaderboard />
+      </div>
+
+      <div className="w-full max-w-lg lg:order-1">
         <div className="terminal-card cyber-chamfer panel-scan">
           <div className="terminal-header">
             <span className="terminal-dot" style={{ background: '#ff3366' }} />
@@ -342,6 +350,8 @@ export default function HomePage() {
         <div className="absolute -top-px -right-px w-5 h-5 border-t-2 border-r-2 border-neon" />
         <div className="absolute -bottom-px -left-px w-5 h-5 border-b-2 border-l-2 border-neon" />
         <div className="absolute -bottom-px -right-px w-5 h-5 border-b-2 border-r-2 border-neon" />
+      </div>
+
       </div>
     </main>
   )
