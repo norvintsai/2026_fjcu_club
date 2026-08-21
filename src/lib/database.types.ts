@@ -26,6 +26,24 @@ export interface Submission {
 export interface Database {
   public: {
     Tables: {
+      authorized_admins: {
+        Row:    { student_id: string; email: string; display_name: string | null; created_at: string }
+        Insert: { student_id: string; email: string; display_name?: string | null; created_at?: string }
+        Update: { email?: string; display_name?: string | null }
+        Relationships: []
+      }
+      admin_accounts: {
+        Row:    { student_id: string; password_hash: string | null; is_active: boolean; created_at: string; last_login: string | null }
+        Insert: { student_id: string; password_hash?: string | null; is_active?: boolean; created_at?: string; last_login?: string | null }
+        Update: { password_hash?: string | null; is_active?: boolean; last_login?: string | null }
+        Relationships: []
+      }
+      admin_otps: {
+        Row:    { id: string; student_id: string; code: string; expires_at: string; used: boolean; created_at: string }
+        Insert: { id?: string; student_id: string; code: string; expires_at: string; used?: boolean; created_at?: string }
+        Update: { used?: boolean }
+        Relationships: []
+      }
       questions: {
         Row: {
           id: number
