@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
   const setPinCfmRef = useRef<OtpInputHandle>(null)
   const [newPin, setNewPin]   = useState('')
   const [cfmPin, setCfmPin]   = useState('')
-  const [setPinStatus, setSetPinStatus] = useState<OtpStatus>('idle')
+  const [pinSetStatus, setPinSetStatus] = useState<OtpStatus>('idle')
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -135,8 +135,8 @@ export default function AdminLoginPage() {
   async function handleSetPin() {
     if (newPin.length !== 6) return
     if (newPin !== cfmPin) {
-      setSetPinStatus('error')
-      setTimeout(() => { setPinCfmRef.current?.clear(); setCfmPin(''); setSetPinStatus('idle') }, 1400)
+      setPinSetStatus('error')
+      setTimeout(() => { setPinCfmRef.current?.clear(); setCfmPin(''); setPinSetStatus('idle') }, 1400)
       setError('兩次輸入的密碼不一致')
       return
     }
@@ -150,12 +150,12 @@ export default function AdminLoginPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setSetPinStatus('error')
-        setTimeout(() => setSetPinStatus('idle'), 1400)
+        setPinSetStatus('error')
+        setTimeout(() => setPinSetStatus('idle'), 1400)
         setError(data.error)
         return
       }
-      setSetPinStatus('success')
+      setPinSetStatus('success')
       setTimeout(() => router.push('/admin/dashboard'), 500)
     } catch {
       setError('連線失敗，請重試')
@@ -386,7 +386,7 @@ export default function AdminLoginPage() {
                       ref={setPinCfmRef}
                       length={6}
                       mask
-                      status={setPinStatus}
+                      status={pinSetStatus}
                       disabled={loading}
                       onChange={setCfmPin}
                       onComplete={handleSetPin}
