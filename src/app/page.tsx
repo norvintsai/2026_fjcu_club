@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { parseStudentId, type ParsedStudentId } from '@/lib/student-id'
 import { checkProfanity } from '@/lib/profanity'
 import Leaderboard from '@/components/Leaderboard'
+import DepartmentEditor from '@/components/DepartmentEditor'
 
 type Step = 'id' | 'returning' | 'confirm'
 
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [nickname, setNickname]   = useState('')
   const [error, setError]         = useState('')
   const [checking, setChecking]   = useState(false)
+  const [editingDept, setEditingDept] = useState(false)
 
   async function handleIdSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -267,54 +269,76 @@ export default function HomePage() {
                     <span className="dot-green neon-pulse" />
                     <span className="text-neon text-xs font-orbitron tracking-[.2em] uppercase">訊號確認</span>
                     <span className="ml-auto text-dim text-xs font-orbitron">ID-{studentId}</span>
+                    {!editingDept && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingDept(true)}
+                        className="ml-3 text-xs font-orbitron tracking-wider px-2 py-0.5 border rounded"
+                        style={{ color: '#00d4ff', borderColor: '#00d4ff40', background: 'rgba(0,212,255,.06)' }}
+                      >
+                        ✏ 修改
+                      </button>
+                    )}
                   </div>
-                  <div className="px-4 py-4 grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 text-xs font-orbitron">
-                    <span className="text-dim tracking-wider">部別</span>
-                    <span className="text-fore">{parsed.division}</span>
-                    <span className="text-dim tracking-wider">系所</span>
-                    <span className="text-fore leading-relaxed">{parsed.deptName}</span>
-                    <span className="text-dim tracking-wider">年級</span>
-                    <span className="text-neon text-neon-glow font-black">{parsed.grade}</span>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs text-dim font-orbitron uppercase tracking-[.15em] mb-2">
-                    ▸ 艦員代號（暱稱）
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neon text-sm select-none">&gt;</span>
-                    <input
-                      type="text"
-                      value={nickname}
-                      onChange={e => { setNickname(e.target.value); setError('') }}
-                      placeholder="輸入你的暱稱..."
-                      className="cyber-input cyber-chamfer-sm pl-8"
-                      autoComplete="off"
-                      maxLength={20}
-                      autoFocus
+                  {editingDept ? (
+                    <DepartmentEditor
+                      onSave={p => { setParsed(p); setEditingDept(false) }}
+                      onCancel={() => setEditingDept(false)}
                     />
-                  </div>
+                  ) : (
+                    <div className="px-4 py-4 grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 text-xs font-orbitron">
+                      <span className="text-dim tracking-wider">部別</span>
+                      <span className="text-fore">{parsed.division}</span>
+                      <span className="text-dim tracking-wider">系所</span>
+                      <span className="text-fore leading-relaxed">{parsed.deptName}</span>
+                      <span className="text-dim tracking-wider">年級</span>
+                      <span className="text-neon text-neon-glow font-black">{parsed.grade}</span>
+                    </div>
+                  )}
                 </div>
 
-                {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
+                {!editingDept && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-dim font-orbitron uppercase tracking-[.15em] mb-2">
+                        ▸ 艦員代號（暱稱）
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neon text-sm select-none">&gt;</span>
+                        <input
+                          type="text"
+                          value={nickname}
+                          onChange={e => { setNickname(e.target.value); setError('') }}
+                          placeholder="輸入你的暱稱..."
+                          className="cyber-input cyber-chamfer-sm pl-8"
+                          autoComplete="off"
+                          maxLength={20}
+                          autoFocus
+                        />
+                      </div>
+                    </div>
 
-                <div className="flex gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => { setStep('id'); setError('') }}
-                    className="cyber-btn-ghost cyber-chamfer-sm flex-none px-5"
-                  >
-                    ◀ 返回
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!nickname.trim()}
-                    className="cyber-btn cyber-chamfer-sm flex-1 justify-center text-sm"
-                  >
-                    <span>▶▶</span> 開始測驗
-                  </button>
-                </div>
+                    {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
+
+                    <div className="flex gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setStep('id'); setError('') }}
+                        className="cyber-btn-ghost cyber-chamfer-sm flex-none px-5"
+                      >
+                        ◀ 返回
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!nickname.trim()}
+                        className="cyber-btn cyber-chamfer-sm flex-1 justify-center text-sm"
+                      >
+                        <span>▶▶</span> 開始測驗
+                      </button>
+                    </div>
+                  </>
+                )}
               </form>
             )}
 
