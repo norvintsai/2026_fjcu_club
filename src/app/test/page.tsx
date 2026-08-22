@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Question } from '@/lib/database.types'
 import SubmitAnimation from '@/components/SubmitAnimation'
+import ReportButton from '@/components/ReportButton'
 
 function TestContent() {
   const router = useRouter()
@@ -91,6 +92,7 @@ function TestContent() {
   return (
     <>
     <SubmitAnimation visible={showAnim} />
+    <ReportButton studentId={studentId} page="test" />
     <main className="min-h-screen cyber-grid flex flex-col px-4 py-8 relative overflow-hidden">
       {/* Ambient glows */}
       <div className="absolute top-0 right-0 w-80 h-80 pointer-events-none"

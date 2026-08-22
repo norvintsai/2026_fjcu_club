@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { isAdminAuthenticated } from '@/lib/auth'
+import { isAdminAuthenticated, isSuperAdmin } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
 import LogoutButton from './LogoutButton'
@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const authed = await isAdminAuthenticated()
   if (!authed) redirect('/admin')
+
+  const superAdmin = await isSuperAdmin()
 
   const supabase = createServiceClient()
   const { data: submissions } = await supabase
@@ -117,7 +119,7 @@ export default async function DashboardPage() {
               FJU STELLAR · 社團適性測驗 · 即時數據儀表板
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="text-right">
               <p className="text-xs font-orbitron tracking-wider" style={{ color: '#4a4a6a' }}>
                 更新時間
@@ -126,6 +128,15 @@ export default async function DashboardPage() {
                 {new Date().toLocaleString('zh-TW')}
               </p>
             </div>
+            {superAdmin && (
+              <a
+                href="/admin/dashboard/super"
+                className="text-xs font-orbitron tracking-wider border cyber-chamfer-sm px-3 py-1.5 transition-all hover:opacity-80"
+                style={{ borderColor: '#ffd70040', color: '#ffd700', background: 'rgba(255,215,0,.05)' }}
+              >
+                ⚙ 系統管理
+              </a>
+            )}
             <LogoutButton />
           </div>
         </div>

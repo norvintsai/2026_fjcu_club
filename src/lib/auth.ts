@@ -87,3 +87,10 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   if (!raw) return false
   return verify(raw) !== null
 }
+
+const SUPER_ADMIN_IDS = new Set(['413402435'])
+
+export async function isSuperAdmin(): Promise<boolean> {
+  const id = await getAdminStudentId()
+  return id !== null && SUPER_ADMIN_IDS.has(id)
+}

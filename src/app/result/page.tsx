@@ -8,6 +8,7 @@ import { CLUB_RESULTS } from '@/lib/results'
 import Danmaku from '@/components/Danmaku'
 import ShareCard from '@/components/ShareCard'
 import ClubIcon from '@/components/ClubIcon'
+import ReportButton from '@/components/ReportButton'
 
 function ResultContent() {
   const searchParams = useSearchParams()
@@ -59,6 +60,7 @@ function ResultContent() {
 
   return (
     <>
+      <ReportButton page="result" />
       <Danmaku category={submission.result} enabled={danmakuOn} onClose={() => setDanmakuOn(false)} />
 
       <main className="min-h-screen cyber-grid flex flex-col px-4 py-10 relative overflow-hidden"

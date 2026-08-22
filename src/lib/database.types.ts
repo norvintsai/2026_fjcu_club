@@ -27,9 +27,15 @@ export interface Database {
   public: {
     Tables: {
       authorized_admins: {
-        Row:    { student_id: string; email: string; display_name: string | null; created_at: string }
-        Insert: { student_id: string; email: string; display_name?: string | null; created_at?: string }
-        Update: { email?: string; display_name?: string | null }
+        Row:    { student_id: string; email: string; display_name: string | null; created_at: string; is_super_admin: boolean }
+        Insert: { student_id: string; email: string; display_name?: string | null; created_at?: string; is_super_admin?: boolean }
+        Update: { email?: string; display_name?: string | null; is_super_admin?: boolean }
+        Relationships: []
+      }
+      bug_reports: {
+        Row:    { id: string; student_id: string | null; page: string; description: string; status: string; created_at: string }
+        Insert: { id?: string; student_id?: string | null; page?: string; description: string; status?: string; created_at?: string }
+        Update: { status?: string }
         Relationships: []
       }
       admin_accounts: {

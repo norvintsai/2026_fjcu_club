@@ -9,6 +9,7 @@ import {
   getGradesForDivision,
   type Division,
 } from '@/lib/departments'
+import CyberSearchSelect from './ui/cyber-search-select'
 
 interface Props {
   onSave: (p: ParsedStudentId) => void
@@ -36,15 +37,9 @@ export default function DepartmentEditor({ onSave, onCancel }: Props) {
 
   const canSave = division && college && dept && grade
 
-  const selectStyle = (val: string, enabled: boolean) => ({
-    color:   val     ? undefined : '#3a3a4a',
-    opacity: enabled ? 1         : 0.4,
-    cursor:  enabled ? 'pointer' : 'not-allowed',
-  })
-
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="p-4 space-y-3.5">
+      <div className="flex items-center gap-2 mb-3">
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#00d4ff', boxShadow: '0 0 6px #00d4ff' }} />
         <span className="text-xs font-orbitron tracking-wider" style={{ color: '#00d4ff' }}>
           手動修改科系資訊
@@ -53,69 +48,49 @@ export default function DepartmentEditor({ onSave, onCancel }: Props) {
 
       {/* 部別 */}
       <div>
-        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">
-          ▸ 部別
-        </label>
-        <select
+        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">▸ 部別</label>
+        <CyberSearchSelect
+          options={ALL_DIVISIONS}
           value={division}
-          onChange={e => setDivision(e.target.value as Division | '')}
-          className="cyber-input cyber-chamfer-sm w-full"
-          style={selectStyle(division, true)}
-        >
-          <option value="">— 請選擇部別 —</option>
-          {ALL_DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+          onChange={v => setDivision(v as Division)}
+          placeholder="— 請選擇部別 —"
+        />
       </div>
 
       {/* 學院 */}
       <div>
-        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">
-          ▸ 學院
-        </label>
-        <select
+        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">▸ 學院</label>
+        <CyberSearchSelect
+          options={colleges}
           value={college}
-          onChange={e => setCollege(e.target.value)}
+          onChange={setCollege}
+          placeholder="— 請選擇學院 —"
           disabled={!division}
-          className="cyber-input cyber-chamfer-sm w-full"
-          style={selectStyle(college, !!division)}
-        >
-          <option value="">— 請選擇學院 —</option>
-          {colleges.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        />
       </div>
 
       {/* 科系 */}
       <div>
-        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">
-          ▸ 科系
-        </label>
-        <select
+        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">▸ 科系</label>
+        <CyberSearchSelect
+          options={depts}
           value={dept}
-          onChange={e => setDept(e.target.value)}
+          onChange={setDept}
+          placeholder="— 請選擇科系 —"
           disabled={!college}
-          className="cyber-input cyber-chamfer-sm w-full"
-          style={selectStyle(dept, !!college)}
-        >
-          <option value="">— 請選擇科系 —</option>
-          {depts.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+        />
       </div>
 
       {/* 年級 */}
       <div>
-        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">
-          ▸ 年級
-        </label>
-        <select
+        <label className="block text-xs text-dim font-orbitron uppercase tracking-[.12em] mb-1.5">▸ 年級</label>
+        <CyberSearchSelect
+          options={grades}
           value={grade}
-          onChange={e => setGrade(e.target.value)}
+          onChange={setGrade}
+          placeholder="— 請選擇年級 —"
           disabled={!dept}
-          className="cyber-input cyber-chamfer-sm w-full"
-          style={selectStyle(grade, !!dept)}
-        >
-          <option value="">— 請選擇年級 —</option>
-          {grades.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
+        />
       </div>
 
       {/* Buttons */}
