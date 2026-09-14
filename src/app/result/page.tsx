@@ -9,6 +9,7 @@ import Danmaku from '@/components/Danmaku'
 import ShareCard from '@/components/ShareCard'
 import ClubIcon from '@/components/ClubIcon'
 import ReportButton from '@/components/ReportButton'
+import CheckinQR from '@/components/CheckinQR'
 
 function ResultContent() {
   const searchParams = useSearchParams()
@@ -194,6 +195,9 @@ function ResultContent() {
               })}
             </div>
           </div>
+
+          {/* ── QR 簽到 ── */}
+          <CheckinQR submissionId={submission.id} currentResult={submission.result} />
 
           {/* ── 操作按鈕群 ── */}
           <div className="space-y-3 fade-in-up" style={{ animationDelay: '.2s' }}>

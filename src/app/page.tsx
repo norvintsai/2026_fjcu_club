@@ -6,6 +6,7 @@ import { parseStudentId, type ParsedStudentId } from '@/lib/student-id'
 import { checkProfanity } from '@/lib/profanity'
 import Leaderboard from '@/components/Leaderboard'
 import DepartmentEditor from '@/components/DepartmentEditor'
+import CheckinQR from '@/components/CheckinQR'
 
 type Step = 'id' | 'returning' | 'confirm'
 
@@ -256,6 +257,8 @@ export default function HomePage() {
                 >
                   ← 重新輸入學號
                 </button>
+
+                <CheckinQR submissionId={prevSub.id} currentResult={prevSub.result} />
               </div>
             )}
 

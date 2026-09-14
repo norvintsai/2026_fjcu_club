@@ -116,6 +116,27 @@ export interface Database {
         }
         Relationships: []
       }
+      checkins: {
+        Row: {
+          id: string
+          student_id: string
+          locked_result: string
+          checked_in_at: string
+          scanned_by: string | null
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          locked_result: string
+          checked_in_at?: string
+          scanned_by?: string | null
+        }
+        Update: {
+          locked_result?: string
+          scanned_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

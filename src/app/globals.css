@@ -329,12 +329,46 @@ body::after {
   transition: width 0.7s ease;
 }
 
+/* ── QR Checkin Animations ───────────────────────────────── */
+
+@keyframes qrScanBeam {
+  0%   { top: -3px; opacity: 0; }
+  5%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: calc(100% + 3px); opacity: 0; }
+}
+
+@keyframes qrCornerPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.qr-scan-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent 0%, #00ff88 30%, #00ff88 70%, transparent 100%);
+  box-shadow: 0 0 8px #00ff88, 0 0 20px rgba(0,255,136,.4);
+  animation: qrScanBeam 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.qr-corner {
+  animation: qrCornerPulse 2s ease-in-out infinite;
+}
+
+.qr-frame-wrapper {
+  filter: drop-shadow(0 0 12px rgba(0,255,136,.25));
+}
+
 /* @media reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .cyber-glitch,
   .neon-pulse,
   .fade-in-up,
   .slide-in,
-  .panel-scan::after { animation: none; }
+  .panel-scan::after,
+  .qr-scan-beam,
+  .qr-corner { animation: none; }
   .cyber-cursor::after { animation: none; }
 }
