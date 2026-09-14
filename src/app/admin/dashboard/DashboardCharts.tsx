@@ -18,6 +18,15 @@ interface Row {
   created_at: string
 }
 
+interface CheckinRow {
+  id: string
+  student_id: string
+  locked_result: string
+  checked_in_at: string
+  scanned_by: string | null
+  department: string
+}
+
 export interface DashboardData {
   total: number
   todayCount: number
@@ -29,6 +38,9 @@ export interface DashboardData {
   gradeDist: { grade: string; 人數: number }[]
   divisionDist: { name: string; value: number }[]
   recentRows: Row[]
+  checkinCount: number
+  todayCheckinCount: number
+  checkinRows: CheckinRow[]
 }
 
 /* ─── Constants ──────────────────────────────────────── */
@@ -136,13 +148,33 @@ function exportCSV(rows: Row[]) {
   URL.revokeObjectURL(url)
 }
 
+/* ─── CSV export for checkins ────────────────────────── */
+function exportCheckinCSV(rows: CheckinRow[]) {
+  const header = ['學號', '系所', '鎖定結果', '簽到時間', '掃描工作人員']
+  const body = rows.map(r => [
+    r.student_id, r.department, r.locked_result,
+    new Date(r.checked_in_at).toLocaleString('zh-TW'),
+    r.scanned_by ?? '',
+  ])
+  const csv = '﻿' + [header, ...body].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `fju-stellar-checkins-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /* ─── Main component ─────────────────────────────────── */
 export default function DashboardCharts({
   total, todayCount, topClub, deptCount,
   clubDist, dailyTrend, topDepts, gradeDist, divisionDist, recentRows,
+  checkinCount, todayCheckinCount, checkinRows,
 }: DashboardData) {
-  const [showAll, setShowAll] = useState(false)
-  const tableRows = showAll ? recentRows : recentRows.slice(0, 20)
+  const [showAll, setShowAll]             = useState(false)
+  const [showAllCheckins, setShowAllCheckins] = useState(false)
+  const tableRows    = showAll ? recentRows : recentRows.slice(0, 20)
+  const checkinTable = showAllCheckins ? checkinRows : checkinRows.slice(0, 20)
 
   return (
     <div className="space-y-5">
@@ -151,7 +183,7 @@ export default function DashboardCharts({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="總參與人數" value={total} sub="自活動開始累計" color="#00ff88" icon="👥" />
         <KpiCard label="今日新增" value={todayCount} sub={new Date().toLocaleDateString('zh-TW')} color="#00d4ff" icon="📅" />
-        <KpiCard label="最熱門社團屬性" value={topClub || '—'} sub={clubDist[0] ? `佔 ${clubDist[0].pct}%` : ''} color={CLUB_COLORS[topClub] ?? '#ffd700'} icon="🏆" />
+        <KpiCard label="已簽到人數" value={checkinCount} sub={`今日 ${todayCheckinCount} 人`} color="#ffd700" icon="✓" />
         <KpiCard label="已涵蓋系所" value={deptCount} sub="個不同系所" color="#ff00ff" icon="🎓" />
       </div>
 
@@ -379,6 +411,99 @@ export default function DashboardCharts({
                   style={{ border: '1px solid #3a3a5a', color: '#6a6a8a' }}
                 >
                   {showAll ? '▲ 收合' : `▼ 顯示全部 ${recentRows.length} 筆`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </SectionCard>
+
+      {/* ── 簽到紀錄 ── */}
+      <SectionCard
+        title={`簽到紀錄（共 ${checkinRows.length} 筆，今日 ${todayCheckinCount} 筆）`}
+        dot="#ffd700"
+        action={
+          <div className="flex items-center gap-2">
+            <a
+              href="/admin/checkin"
+              className="text-xs font-orbitron tracking-wider px-3 py-1 cyber-chamfer-sm inline-flex items-center gap-1.5"
+              style={{ border: '1px solid #00ff8840', color: '#00ff88', background: 'rgba(0,255,136,.05)' }}
+            >
+              📷 掃碼
+            </a>
+            {checkinRows.length > 0 && (
+              <button
+                onClick={() => exportCheckinCSV(checkinRows)}
+                className="text-xs font-orbitron tracking-wider px-3 py-1 cyber-chamfer-sm"
+                style={{ border: '1px solid #ffd70040', color: '#ffd700' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ffd70010' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+              >
+                ↓ CSV
+              </button>
+            )}
+          </div>
+        }
+      >
+        {checkinRows.length === 0 ? (
+          <p className="text-dim text-xs font-orbitron cyber-cursor tracking-widest">尚無簽到紀錄</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto -mx-6 px-6">
+              <table className="w-full text-xs min-w-[600px]">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #2a2a3a' }}>
+                    {['學號', '系所', '鎖定結果', '簽到時間', '掃描工作人員'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left font-orbitron uppercase tracking-[.12em]"
+                        style={{ color: '#4a4a6a', fontSize: 10 }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {checkinTable.map((r, idx) => {
+                    const col = CLUB_COLORS[r.locked_result] ?? '#ffd700'
+                    const todayStr2 = new Date().toISOString().slice(0, 10)
+                    return (
+                      <tr key={r.id}
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,.04)',
+                          background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,.012)',
+                        }}>
+                        <td className="px-4 py-2.5 font-orbitron" style={{ color: '#c0c0d0' }}>
+                          {r.student_id.slice(0, 3)}••••{r.student_id.slice(-2)}
+                        </td>
+                        <td className="px-4 py-2.5" style={{ color: '#7a7a9a' }}>
+                          {(r.department.split(' ')[0]) ?? r.department}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="font-orbitron text-xs px-2 py-0.5 cyber-chamfer-sm"
+                            style={{ color: col, border: `1px solid ${col}40`, background: `${col}10` }}>
+                            {r.locked_result}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 font-orbitron"
+                          style={{ color: r.checked_in_at.slice(0,10) === todayStr2 ? '#ffd700' : '#4a4a6a', fontSize: 10 }}>
+                          {new Date(r.checked_in_at).toLocaleString('zh-TW')}
+                        </td>
+                        <td className="px-4 py-2.5" style={{ color: '#4a4a6a', fontSize: 10 }}>
+                          {r.scanned_by ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {checkinRows.length > 20 && (
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setShowAllCheckins(v => !v)}
+                  className="text-xs font-orbitron tracking-wider px-4 py-1.5 cyber-chamfer-sm"
+                  style={{ border: '1px solid #3a3a5a', color: '#6a6a8a' }}
+                >
+                  {showAllCheckins ? '▲ 收合' : `▼ 顯示全部 ${checkinRows.length} 筆`}
                 </button>
               </div>
             )}

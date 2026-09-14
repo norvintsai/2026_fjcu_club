@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
 import LogoutButton from './LogoutButton'
 import DashboardCharts from './DashboardCharts'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,15 +15,32 @@ export default async function DashboardPage() {
   const superAdmin = await isSuperAdmin()
 
   const supabase = createServiceClient()
-  const { data: submissions } = await supabase
-    .from('submissions')
-    .select('*')
-    .order('created_at', { ascending: false })
 
-  const rows = (submissions ?? []) as Submission[]
+  const [{ data: submissions }, { data: rawCheckins }] = await Promise.all([
+    supabase.from('submissions').select('*').order('created_at', { ascending: false }),
+    supabase.from('checkins').select('*').order('checked_in_at', { ascending: false }),
+  ])
+
+  const rows       = (submissions ?? []) as Submission[]
+  const checkinRaw = rawCheckins ?? []
+
+  // Enrich checkins with department from submissions
+  const subMap = new Map<string, string>()
+  for (const s of rows) {
+    if (!subMap.has(s.student_id)) subMap.set(s.student_id, s.department)
+  }
+  const checkinRows = checkinRaw.map(c => ({
+    id:            c.id as string,
+    student_id:    c.student_id as string,
+    locked_result: c.locked_result as string,
+    checked_in_at: c.checked_in_at as string,
+    scanned_by:    (c.scanned_by ?? null) as string | null,
+    department:    subMap.get(c.student_id as string) ?? '',
+  }))
+  const today = new Date().toISOString().slice(0, 10)
+  const todayCheckinCount = checkinRows.filter(r => r.checked_in_at.slice(0, 10) === today).length
 
   // ── KPI ──────────────────────────────────────────────
-  const today = new Date().toISOString().slice(0, 10)
   const todayCount = rows.filter(r => r.created_at.slice(0, 10) === today).length
 
   // ── 社團屬性分佈 ──────────────────────────────────────
@@ -128,6 +146,13 @@ export default async function DashboardPage() {
                 {new Date().toLocaleString('zh-TW')}
               </p>
             </div>
+            <Link
+              href="/admin/checkin"
+              className="text-xs font-orbitron tracking-wider border cyber-chamfer-sm px-3 py-1.5 transition-all hover:opacity-80 inline-flex items-center gap-1.5"
+              style={{ borderColor: '#00ff8840', color: '#00ff88', background: 'rgba(0,255,136,.05)' }}
+            >
+              📷 掃碼簽到
+            </Link>
             {superAdmin && (
               <a
                 href="/admin/dashboard/super"
@@ -152,6 +177,9 @@ export default async function DashboardPage() {
           gradeDist={gradeDist}
           divisionDist={divisionDist}
           recentRows={recentRows}
+          checkinCount={checkinRows.length}
+          todayCheckinCount={todayCheckinCount}
+          checkinRows={checkinRows}
         />
       </div>
     </main>
