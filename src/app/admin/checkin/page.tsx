@@ -341,18 +341,25 @@ export default function AdminCheckinPage() {
 
               {(s === 'scanning') && cameraReady && (
                 <>
-                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(0,0,0,.35)' }} />
-                  <div className="absolute pointer-events-none"
+                  {/* Scan guide — fills full frame, aligned with corner brackets */}
+                  <div className="absolute inset-0 pointer-events-none"
                     style={{
-                      top: '20%', left: '20%', right: '20%', bottom: '20%',
-                      border: '2px solid rgba(0,255,136,.6)',
-                      boxShadow: 'inset 0 0 20px rgba(0,255,136,.06)',
-                      background: 'transparent',
+                      border: '2px solid rgba(0,255,136,.5)',
+                      boxShadow: 'inset 0 0 30px rgba(0,255,136,.04)',
                     }}
                   />
+                  {/* Scan beam full width */}
                   <div className="absolute qr-scan-beam pointer-events-none"
-                    style={{ left: '20%', right: '20%', height: 2 }}
+                    style={{ left: 0, right: 0, height: 2 }}
                   />
+                  {/* Hint text at bottom of frame */}
+                  <div className="absolute bottom-0 left-0 right-0 py-2.5 flex items-center justify-center gap-2 pointer-events-none z-10"
+                    style={{ background: 'linear-gradient(transparent, rgba(0,0,0,.55))' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-neon neon-pulse shrink-0" />
+                    <span className="text-xs font-orbitron tracking-widest" style={{ color: '#00ff88' }}>
+                      對準 QR Code 進行掃描
+                    </span>
+                  </div>
                 </>
               )}
 
@@ -373,12 +380,12 @@ export default function AdminCheckinPage() {
             </div>
 
             <div className="flex items-center justify-center gap-2 mt-2 py-1">
-              <span className={s === 'error' ? 'dot-red' : s === 'success' || s === 'already' ? 'dot-amber' : isConfirmOrConfirming ? 'dot-green' : 'dot-green'}
+              <span className={s === 'error' ? 'dot-red' : s === 'success' || s === 'already' ? 'dot-amber' : 'dot-green'}
                 style={s === 'scanning' ? undefined : { animation: 'none' }} />
               <span className="text-xs font-orbitron tracking-widest"
-                style={{ color: s === 'success' || s === 'already' ? '#ffd700' : s === 'error' ? '#ff3366' : s === 'processing' || s === 'confirming' ? '#00d4ff' : isConfirmOrConfirming ? '#00d4ff' : '#6b7280' }}>
+                style={{ color: s === 'success' || s === 'already' ? '#ffd700' : s === 'error' ? '#ff3366' : s === 'processing' || s === 'confirming' ? '#00d4ff' : isConfirmOrConfirming ? '#00d4ff' : '#4a4a6a' }}>
                 {s === 'idle'        ? '初始化相機中'
-                :s === 'scanning'    ? '對準 QR Code 進行掃描'
+                :s === 'scanning'    ? 'SCANNING'
                 :s === 'processing'  ? '讀取學生資料中...'
                 :s === 'confirm'     ? '請確認後完成簽到'
                 :s === 'confirming'  ? '確認簽到中...'
