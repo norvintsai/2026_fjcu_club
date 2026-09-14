@@ -39,9 +39,9 @@ export interface Database {
         Relationships: []
       }
       admin_accounts: {
-        Row:    { student_id: string; password_hash: string | null; is_active: boolean; created_at: string; last_login: string | null }
-        Insert: { student_id: string; password_hash?: string | null; is_active?: boolean; created_at?: string; last_login?: string | null }
-        Update: { password_hash?: string | null; is_active?: boolean; last_login?: string | null }
+        Row:    { student_id: string; password_hash: string | null; is_active: boolean; created_at: string; last_login: string | null; must_change_password: boolean }
+        Insert: { student_id: string; password_hash?: string | null; is_active?: boolean; created_at?: string; last_login?: string | null; must_change_password?: boolean }
+        Update: { password_hash?: string | null; is_active?: boolean; last_login?: string | null; must_change_password?: boolean }
         Relationships: []
       }
       admin_otps: {

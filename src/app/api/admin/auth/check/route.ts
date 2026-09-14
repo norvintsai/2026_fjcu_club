@@ -24,12 +24,16 @@ export async function POST(req: NextRequest) {
 
     const { data: account } = await db
       .from('admin_accounts')
-      .select('password_hash')
+      .select('password_hash, must_change_password')
       .eq('student_id', studentId)
       .single()
 
     const status = account?.password_hash ? 'registered' : 'new'
-    return NextResponse.json({ status, maskedEmail: maskEmail(auth.email) })
+    return NextResponse.json({
+      status,
+      maskedEmail:        maskEmail(auth.email),
+      mustChangePassword: !!account?.must_change_password,
+    })
   } catch (err) {
     console.error('[check]', err)
     return NextResponse.json({ error: '伺服器錯誤，請稍後再試' }, { status: 500 })

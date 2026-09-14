@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { OtpInput, type OtpInputHandle, type OtpStatus } from '@/components/ui/otp-input'
 
-type Step = 'id' | 'otp' | 'set-pin' | 'pin'
+type Step = 'id' | 'otp' | 'set-pin' | 'pin' | 'initial-login' | 'change-pin'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -31,6 +31,16 @@ export default function AdminLoginPage() {
   const [newPin, setNewPin]   = useState('')
   const [cfmPin, setCfmPin]   = useState('')
   const [pinSetStatus, setPinSetStatus] = useState<OtpStatus>('idle')
+
+  // Initial-login step (phone as temporary password)
+  const [phoneInput, setPhoneInput] = useState('')
+
+  // Change-PIN step (forced after initial login)
+  const changePinRef    = useRef<OtpInputHandle>(null)
+  const changePinCfmRef = useRef<OtpInputHandle>(null)
+  const [changePin,    setChangePin]    = useState('')
+  const [changePinCfm, setChangePinCfm] = useState('')
+  const [changePinStatus, setChangePinStatus] = useState<OtpStatus>('idle')
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -64,7 +74,11 @@ export default function AdminLoginPage() {
       setMasked(data.maskedEmail)
 
       if (data.status === 'registered') {
-        setStep('pin')
+        if (data.mustChangePassword) {
+          setStep('initial-login')
+        } else {
+          setStep('pin')
+        }
       } else {
         await doSendOtp()
         setStep('otp')
@@ -182,7 +196,11 @@ export default function AdminLoginPage() {
         return
       }
       setPinStatus('success')
-      setTimeout(() => router.push('/admin/dashboard'), 500)
+      if (data.mustChangePassword) {
+        setTimeout(() => setStep('change-pin'), 500)
+      } else {
+        setTimeout(() => router.push('/admin/dashboard'), 500)
+      }
     } catch {
       setPinStatus('error')
       setTimeout(() => { pinRef.current?.clear(); setPinStatus('idle') }, 1400)
@@ -192,11 +210,68 @@ export default function AdminLoginPage() {
     }
   }
 
+  /* ── Initial login with phone number ── */
+  async function handleInitialLogin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!phoneInput.trim()) return
+    setError('')
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, pin: phoneInput.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); return }
+      setStep('change-pin')
+    } catch {
+      setError('連線失敗，請重試')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Forced PIN change after initial login ── */
+  async function handleChangePin() {
+    if (changePin.length !== 6) return
+    if (changePin !== changePinCfm) {
+      setChangePinStatus('error')
+      setTimeout(() => { changePinCfmRef.current?.clear(); setChangePinCfm(''); setChangePinStatus('idle') }, 1400)
+      setError('兩次輸入的密碼不一致')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/admin/auth/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: changePin }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setChangePinStatus('error')
+        setTimeout(() => setChangePinStatus('idle'), 1400)
+        setError(data.error)
+        return
+      }
+      setChangePinStatus('success')
+      setTimeout(() => router.push('/admin/dashboard'), 500)
+    } catch {
+      setError('連線失敗，請重試')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const stepLabel = {
-    'id':      '身份確認',
-    'otp':     '電子信驗證',
-    'set-pin': '設定登入密碼',
-    'pin':     '密碼登入',
+    'id':            '身份確認',
+    'otp':           '電子信驗證',
+    'set-pin':       '設定登入密碼',
+    'pin':           '密碼登入',
+    'initial-login': '初次登入',
+    'change-pin':    '設定新密碼',
   }[step]
 
   return (
@@ -392,6 +467,110 @@ export default function AdminLoginPage() {
                       onComplete={handleSetPin}
                       errorMessage="兩次密碼不一致"
                       successMessage="設定成功，正在登入..."
+                      hint="輸入後自動完成設定"
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
+              </div>
+            )}
+
+            {/* ── STEP INITIAL-LOGIN (first time, use phone as password) ── */}
+            {step === 'initial-login' && (
+              <form onSubmit={handleInitialLogin} className="space-y-5">
+                <div className="border cyber-chamfer-sm p-3 text-xs font-orbitron space-y-1"
+                  style={{ borderColor: '#ffd70040', background: 'rgba(255,215,0,.03)' }}>
+                  <span className="block" style={{ color: '#ffd700' }}>▸ 初次登入</span>
+                  <span style={{ color: '#6a6a8a' }}>請使用報名表填寫的手機號碼作為初始密碼，登入後須立即設定新密碼。</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-2"
+                    style={{ color: '#4a4a6a' }}>
+                    ▸ 手機號碼（初始密碼）
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none"
+                      style={{ color: '#ff3366' }}>&gt;</span>
+                    <input
+                      type="password"
+                      value={phoneInput}
+                      onChange={e => { setPhoneInput(e.target.value); setError('') }}
+                      placeholder="輸入手機號碼..."
+                      className="cyber-input cyber-chamfer-sm pl-8"
+                      style={{ color: '#ff9999' }}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-danger text-xs font-orbitron tracking-wider">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={!phoneInput.trim() || loading}
+                  className="w-full py-3 font-orbitron text-xs font-bold tracking-[.15em] uppercase cyber-chamfer-sm transition-all"
+                  style={{
+                    background: 'transparent', border: '2px solid #ff3366', color: '#ff3366',
+                    opacity: !phoneInput.trim() || loading ? .5 : 1,
+                    cursor:  !phoneInput.trim() || loading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loading ? <span className="cyber-cursor">驗證中</span> : '▶ 確認'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setStep('id'); setPhoneInput(''); setError('') }}
+                  className="w-full text-xs font-orbitron tracking-wider text-center"
+                  style={{ color: '#4a4a6a' }}
+                >
+                  ← 重新輸入學號
+                </button>
+              </form>
+            )}
+
+            {/* ── STEP CHANGE-PIN (forced new password) ── */}
+            {step === 'change-pin' && (
+              <div className="space-y-6">
+                <div className="border cyber-chamfer-sm p-3 text-xs font-orbitron"
+                  style={{ borderColor: '#ff336640', background: 'rgba(255,51,102,.03)', color: '#6a6a8a' }}>
+                  <span className="block mb-1" style={{ color: '#ff3366' }}>▸ 請設定你的新密碼</span>
+                  請設定一組 6 位數字密碼，此後登入將使用此密碼。
+                </div>
+
+                <div>
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
+                    style={{ color: '#4a4a6a' }}>▸ 新密碼</label>
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={changePinRef}
+                      length={6}
+                      mask
+                      autoFocus
+                      disabled={loading}
+                      onChange={setChangePin}
+                      onComplete={() => changePinCfmRef.current?.focus()}
+                      hint="輸入後請繼續確認"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-orbitron uppercase tracking-[.15em] mb-4"
+                    style={{ color: '#4a4a6a' }}>▸ 確認新密碼</label>
+                  <div className="flex justify-center">
+                    <OtpInput
+                      ref={changePinCfmRef}
+                      length={6}
+                      mask
+                      status={changePinStatus}
+                      disabled={loading}
+                      onChange={setChangePinCfm}
+                      onComplete={handleChangePin}
+                      errorMessage="兩次密碼不一致"
+                      successMessage="密碼設定成功，正在登入..."
                       hint="輸入後自動完成設定"
                     />
                   </div>

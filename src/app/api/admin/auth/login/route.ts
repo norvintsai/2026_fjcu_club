@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const { data: account } = await db
       .from('admin_accounts')
-      .select('password_hash, is_active')
+      .select('password_hash, is_active, must_change_password')
       .eq('student_id', studentId)
       .single()
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       .eq('student_id', studentId)
 
     await setMemberSession(studentId)
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, mustChangePassword: !!account.must_change_password })
   } catch (err) {
     console.error('[login]', err)
     return NextResponse.json({ error: '伺服器錯誤，請稍後再試' }, { status: 500 })
