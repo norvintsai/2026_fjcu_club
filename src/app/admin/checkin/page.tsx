@@ -6,13 +6,29 @@ import jsQR from 'jsqr'
 import ClubIcon from '@/components/ClubIcon'
 
 /* ─── Types ──────────────────────────────────────────── */
+type QrErrorCode = 'INVALID_QR' | 'NOT_FOUND' | 'SYSTEM' | 'NETWORK'
+
+const QR_ERROR_INFO: Record<QrErrorCode, { label: string; hint: string }> = {
+  INVALID_QR: { label: 'QR Code 無效', hint: '此 QR Code 非本系統所生成，或連結已損毀' },
+  NOT_FOUND:  { label: '找不到學生紀錄', hint: '學生可能尚未完成測驗，請確認後重試' },
+  SYSTEM:     { label: '系統錯誤', hint: '伺服器發生問題，錯誤已自動記錄，請稍後重試' },
+  NETWORK:    { label: '網路錯誤', hint: '請確認裝置網路連線後重試' },
+}
+
+const QR_ERROR_COLORS: Record<QrErrorCode, string> = {
+  INVALID_QR: '#ff3366',
+  NOT_FOUND:  '#ff9966',
+  SYSTEM:     '#ff3366',
+  NETWORK:    '#ffd700',
+}
+
 type ScanState =
   | { status: 'idle' }
   | { status: 'scanning' }
   | { status: 'processing' }
   | { status: 'success'; lockedResult: string; department: string; studentId: string }
   | { status: 'already'; lockedResult: string; checkedInAt: string; department: string }
-  | { status: 'error'; message: string }
+  | { status: 'error'; code: QrErrorCode; detail?: string }
 
 interface CheckinRecord {
   id: string
@@ -82,6 +98,8 @@ export default function AdminCheckinPage() {
 
     setScanState({ status: 'processing' })
 
+    let code: QrErrorCode = 'SYSTEM'
+
     try {
       const res  = await fetch('/api/admin/checkin/confirm', {
         method:  'POST',
@@ -93,13 +111,41 @@ export default function AdminCheckinPage() {
       if (res.status === 409 && data.alreadyChecked) {
         setScanState({ status: 'already', lockedResult: data.lockedResult, checkedInAt: data.checkedInAt, department: data.department })
       } else if (!res.ok) {
-        setScanState({ status: 'error', message: data.error ?? '簽到失敗' })
+        if (res.status === 400 || data.errorCode === 'INVALID_QR') {
+          code = 'INVALID_QR'
+        } else if (res.status === 404 || data.errorCode === 'NOT_FOUND') {
+          code = 'NOT_FOUND'
+        } else {
+          code = data.errorCode ?? 'SYSTEM'
+        }
+        setScanState({ status: 'error', code, detail: data.error })
+        // Fire-and-forget log – don't block the UI
+        fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            page: 'admin_checkin',
+            description: `QR掃描錯誤 [${code}]: ${rawText.slice(0, 100)}`,
+            category: 'qr_scan_error',
+          }),
+        }).catch(() => {})
       } else {
         setScanState({ status: 'success', lockedResult: data.lockedResult, department: data.department, studentId: data.studentId })
         refreshRecords()
       }
     } catch {
-      setScanState({ status: 'error', message: '網路錯誤，請重試' })
+      code = 'NETWORK'
+      setScanState({ status: 'error', code: 'NETWORK' })
+      // Fire-and-forget log – don't block the UI
+      fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: 'admin_checkin',
+          description: `QR掃描錯誤 [${code}]: ${rawText.slice(0, 100)}`,
+          category: 'qr_scan_error',
+        }),
+      }).catch(() => {})
     }
 
     // Auto-reset after 3.5 s
@@ -329,12 +375,15 @@ export default function AdminCheckinPage() {
                 </div>
               )}
 
-              {s === 'error' && (
+              {s === 'error' && scanState.status === 'error' && (
                 <div className="p-4 flex items-center gap-4">
-                  <div className="text-3xl shrink-0 text-danger">✕</div>
+                  <div className="text-3xl shrink-0" style={{ color: QR_ERROR_COLORS[scanState.code] }}>✕</div>
                   <div>
-                    <p className="font-orbitron text-sm tracking-wider text-danger mb-1">錯誤</p>
-                    <p className="text-dim text-xs">{(scanState as { status: 'error'; message: string }).message}</p>
+                    <p className="font-orbitron text-sm tracking-wider mb-1"
+                      style={{ color: QR_ERROR_COLORS[scanState.code] }}>
+                      {QR_ERROR_INFO[scanState.code].label}
+                    </p>
+                    <p className="text-dim text-xs">{QR_ERROR_INFO[scanState.code].hint}</p>
                   </div>
                 </div>
               )}

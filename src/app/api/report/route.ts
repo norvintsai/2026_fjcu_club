@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { studentId, page, description } = await req.json()
+    const { studentId, page, description, category } = await req.json()
 
     if (!description?.trim()) {
       return NextResponse.json({ error: '請填寫問題描述' }, { status: 400 })
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
         page:        page ?? 'unknown',
         description: description.trim(),
         status:      'open',
+        category:    category ?? 'general',
       })
 
     return NextResponse.json({ ok: true })

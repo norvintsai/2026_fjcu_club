@@ -90,8 +90,8 @@ export default function HomePage() {
           </div>
 
           {/* Cockpit instrument strip */}
-          <div className="flex items-center gap-0 px-5 py-2.5 border-b border-border overflow-hidden">
-            <div className="flex items-center gap-4 flex-1 flex-wrap">
+          <div className="flex flex-wrap items-center gap-0 px-5 py-2.5 border-b border-border overflow-hidden">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 flex-wrap">
               {/* Engine output */}
               <div className="flex flex-col gap-0.5 min-w-[72px]">
                 <span className="text-dim font-orbitron" style={{ fontSize: 8, letterSpacing: '0.12em' }}>引擎輸出</span>
@@ -140,9 +140,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="p-7">
+          <div className="p-5 sm:p-7">
             <div className="mb-7">
-              <h1 className="font-orbitron font-black text-2xl md:text-3xl uppercase tracking-widest text-fore cyber-glitch leading-snug mb-2">
+              <h1 className="font-orbitron font-black text-xl sm:text-2xl md:text-3xl uppercase tracking-widest text-fore cyber-glitch leading-snug mb-2">
                 STELLAR<br />
                 <span className="text-neon text-neon-glow">適性測驗</span><br />
                 終端系統
@@ -225,7 +225,7 @@ export default function HomePage() {
                       偵測到你的歷史紀錄
                     </span>
                   </div>
-                  <div className="grid grid-cols-[70px_1fr] gap-x-3 gap-y-2 text-xs font-orbitron">
+                  <div className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-2 text-xs font-orbitron">
                     <span className="text-dim">上次結果</span>
                     <span className="text-neon font-bold">{prevSub.result}</span>
                     <span className="text-dim">系級</span>
@@ -355,7 +355,7 @@ export default function HomePage() {
           </div>
 
           {/* Student ID lookup link */}
-          <div className="px-7 pb-5">
+          <div className="px-5 pb-5 sm:px-7">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 h-px bg-border" />
               <span className="text-xs text-dim font-orbitron tracking-widest">學號查詢</span>

@@ -90,7 +90,7 @@ function ResultContent() {
               <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">目標星球</span>
             </div>
 
-            <div className="p-8 text-center relative z-10">
+            <div className="p-5 sm:p-8 text-center relative z-10">
               <div className="mb-4 flex justify-center">
                 <ClubIcon category={submission.result} size={72} />
               </div>
@@ -141,7 +141,7 @@ function ResultContent() {
                 <span className="text-dim text-xs font-orbitron">{showClubs ? '▲ 收合' : '▼ 展開'}</span>
               </button>
               {showClubs && (
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex flex-wrap gap-2">
                     {clubInfo.clubs.map(club => (
                       <span key={club}
@@ -166,7 +166,7 @@ function ResultContent() {
               <span className="terminal-dot" style={{ background: '#00d4ff' }} />
               <span className="ml-3 text-dim text-xs font-orbitron uppercase tracking-widest">適性分析</span>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               {scoreEntries.map(([category, score], idx) => {
                 const pct   = total > 0 ? Math.round((score / total) * 100) : 0
                 const isTop = category === submission.result

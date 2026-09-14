@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const { submissionId, token } = await req.json()
 
   if (!submissionId || token !== sign(submissionId)) {
-    return NextResponse.json({ error: 'QR Code 無效' }, { status: 400 })
+    return NextResponse.json({ error: 'QR Code 無效', errorCode: 'INVALID_QR' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     .eq('id', submissionId)
     .single()
 
-  if (!submission) return NextResponse.json({ error: '找不到提交紀錄' }, { status: 404 })
+  if (!submission) return NextResponse.json({ error: '找不到提交紀錄', errorCode: 'NOT_FOUND' }, { status: 404 })
 
   const { data: existing } = await supabase
     .from('checkins')
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       scanned_by:    adminId ?? null,
     })
 
-  if (error) return NextResponse.json({ error: '簽到失敗，請重試' }, { status: 500 })
+  if (error) return NextResponse.json({ error: '簽到失敗，請重試', errorCode: 'SYSTEM' }, { status: 500 })
 
   return NextResponse.json({
     success:      true,

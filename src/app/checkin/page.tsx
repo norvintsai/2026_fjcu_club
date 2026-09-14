@@ -137,7 +137,7 @@ function CheckinContent() {
             </span>
           </div>
 
-          <div className="p-7 space-y-6">
+          <div className="p-5 sm:p-7 space-y-6">
             {/* Result display */}
             <div className="text-center">
               <div className="mb-3 flex justify-center">
@@ -164,7 +164,7 @@ function CheckinContent() {
             <div className="border cyber-chamfer-sm p-4 space-y-2"
               style={{ borderColor: isCheckedIn ? 'rgba(255,215,0,.2)' : 'rgba(0,255,136,.15)',
                        background: isCheckedIn ? 'rgba(255,215,0,.03)' : 'rgba(0,255,136,.03)' }}>
-              <div className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 text-xs font-orbitron">
+              <div className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-2 text-xs font-orbitron">
                 <span className="text-dim tracking-wider">系所</span>
                 <span className="text-fore leading-relaxed">{submission.department}</span>
                 <span className="text-dim tracking-wider">學號</span>

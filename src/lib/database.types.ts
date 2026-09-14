@@ -33,9 +33,9 @@ export interface Database {
         Relationships: []
       }
       bug_reports: {
-        Row:    { id: string; student_id: string | null; page: string; description: string; status: string; created_at: string }
-        Insert: { id?: string; student_id?: string | null; page?: string; description: string; status?: string; created_at?: string }
-        Update: { status?: string }
+        Row:    { id: string; student_id: string | null; page: string; description: string; status: string; category: string; created_at: string }
+        Insert: { id?: string; student_id?: string | null; page?: string; description: string; status?: string; category?: string; created_at?: string }
+        Update: { status?: string; category?: string }
         Relationships: []
       }
       admin_accounts: {

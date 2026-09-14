@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase'
 import { Submission } from '@/lib/database.types'
 import LogoutButton from './LogoutButton'
 import DashboardCharts from './DashboardCharts'
+import BugReportPanel from './BugReportPanel'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -125,7 +126,7 @@ export default async function DashboardPage() {
       <div className="max-w-6xl mx-auto relative z-10">
 
         {/* ── 頂部 header ── */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-6 sm:mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1.5">
               <span className="w-2 h-2 rounded-full bg-neon neon-pulse" />
@@ -137,7 +138,7 @@ export default async function DashboardPage() {
               FJU STELLAR · 社團適性測驗 · 即時數據儀表板
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <div className="text-right">
               <p className="text-xs font-orbitron tracking-wider" style={{ color: '#4a4a6a' }}>
                 更新時間
@@ -181,6 +182,7 @@ export default async function DashboardPage() {
           todayCheckinCount={todayCheckinCount}
           checkinRows={checkinRows}
         />
+        <BugReportPanel />
       </div>
     </main>
   )

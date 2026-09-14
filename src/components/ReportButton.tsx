@@ -11,6 +11,7 @@ interface Props {
 export default function ReportButton({ studentId, page = 'unknown' }: Props) {
   const [open, setOpen]         = useState(false)
   const [text, setText]         = useState('')
+  const [category, setCategory] = useState('general')
   const [status, setStatus]     = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
 
   async function submit() {
@@ -20,11 +21,11 @@ export default function ReportButton({ studentId, page = 'unknown' }: Props) {
       const res = await fetch('/api/report', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ studentId, page, description: text }),
+        body:    JSON.stringify({ studentId, page, description: text, category }),
       })
       if (res.ok) {
         setStatus('done')
-        setTimeout(() => { setOpen(false); setStatus('idle'); setText('') }, 1800)
+        setTimeout(() => { setOpen(false); setStatus('idle'); setText(''); setCategory('general') }, 1800)
       } else {
         setStatus('error')
       }
@@ -94,6 +95,24 @@ export default function ReportButton({ studentId, page = 'unknown' }: Props) {
                   </div>
                 ) : (
                   <>
+                    <div>
+                      <label className="block text-xs text-dim font-orbitron uppercase tracking-[.15em] mb-2">
+                        ▸ 問題分類
+                      </label>
+                      <select
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        className="cyber-input cyber-chamfer-sm w-full"
+                        style={{ fontFamily: 'inherit', fontSize: 12 }}
+                      >
+                        <option value="general">一般問題</option>
+                        <option value="ui_bug">介面顯示</option>
+                        <option value="data_error">資料錯誤</option>
+                        <option value="auth_issue">登入/認證</option>
+                        <option value="other">其他</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-xs text-dim font-orbitron uppercase tracking-[.15em] mb-2">
                         ▸ 問題描述
