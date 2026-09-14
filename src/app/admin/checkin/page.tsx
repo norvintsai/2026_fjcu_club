@@ -26,6 +26,8 @@ type ScanState =
   | { status: 'idle' }
   | { status: 'scanning' }
   | { status: 'processing' }
+  | { status: 'confirm'; submissionId: string; token: string; lockedResult: string; department: string; studentId: string }
+  | { status: 'confirming' }
   | { status: 'success'; lockedResult: string; department: string; studentId: string }
   | { status: 'already'; lockedResult: string; checkedInAt: string; department: string }
   | { status: 'error'; code: QrErrorCode; detail?: string }
@@ -57,7 +59,6 @@ export default function AdminCheckinPage() {
   const canvasRef      = useRef<HTMLCanvasElement>(null)
   const streamRef      = useRef<MediaStream | null>(null)
   const lastUrlRef     = useRef<{ url: string; ts: number }>({ url: '', ts: 0 })
-  // Keep a ref in sync with scanState so setInterval closure can read it without stale values
   const scanStateRef   = useRef<ScanState>({ status: 'idle' })
   const resetTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -66,8 +67,8 @@ export default function AdminCheckinPage() {
   const [cameraError, setCameraError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
   const [showLog, setShowLog]         = useState(false)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
-  // Keep ref in sync with state
   useEffect(() => { scanStateRef.current = scanState }, [scanState])
 
   /* ── Records ── */
@@ -80,10 +81,25 @@ export default function AdminCheckinPage() {
 
   useEffect(() => { refreshRecords() }, [refreshRecords])
 
-  /* ── Process a decoded QR URL ── */
+  /* ── Cancel a check-in ── */
+  const handleCancel = useCallback(async (checkinId: string) => {
+    setCancellingId(checkinId)
+    try {
+      const res = await fetch('/api/admin/checkin/cancel', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkinId }),
+      })
+      if (res.ok) {
+        setRecords(prev => prev.filter(r => r.id !== checkinId))
+      }
+    } catch { /* ignore */ }
+    setCancellingId(null)
+  }, [])
+
+  /* ── Process a decoded QR URL: fetch preview, then wait for staff confirm ── */
   const processQR = useCallback(async (rawText: string) => {
     const now = Date.now()
-    // Debounce: ignore same URL within 6 s
     if (rawText === lastUrlRef.current.url && now - lastUrlRef.current.ts < 6000) return
     lastUrlRef.current = { url: rawText, ts: now }
 
@@ -98,8 +114,65 @@ export default function AdminCheckinPage() {
 
     setScanState({ status: 'processing' })
 
-    let code: QrErrorCode = 'SYSTEM'
+    try {
+      // Fetch student info and check-in status in parallel
+      const [subRes, ciRes] = await Promise.all([
+        fetch(`/api/result?id=${submissionId}`),
+        fetch(`/api/checkin/token?submissionId=${submissionId}`),
+      ])
+      const subData = await subRes.json()
+      const ciData  = await ciRes.json()
 
+      if (subData.error || !subRes.ok) {
+        setScanState({ status: 'error', code: 'NOT_FOUND' })
+        scheduleReset()
+        return
+      }
+
+      // Already checked in — show info directly, no confirmation needed
+      if (ciData.isCheckedIn) {
+        setScanState({
+          status: 'already',
+          lockedResult: ciData.lockedResult ?? subData.result,
+          checkedInAt:  ciData.checkedInAt ?? '',
+          department:   subData.department ?? '',
+        })
+        scheduleReset()
+        return
+      }
+
+      // Not checked in — show confirmation card
+      setScanState({
+        status:       'confirm',
+        submissionId,
+        token,
+        lockedResult: subData.result,
+        department:   subData.department ?? '',
+        studentId:    subData.student_id ?? '',
+      })
+      // No auto-reset here — wait for staff to tap confirm or cancel
+    } catch {
+      setScanState({ status: 'error', code: 'NETWORK' })
+      scheduleReset()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function scheduleReset(delay = 3500) {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+    resetTimerRef.current = setTimeout(() => {
+      setScanState({ status: 'scanning' })
+      lastUrlRef.current = { url: '', ts: 0 }
+    }, delay)
+  }
+
+  /* ── Staff taps "確認簽到" ── */
+  const handleConfirmCheckin = useCallback(async () => {
+    if (scanStateRef.current.status !== 'confirm') return
+    const { submissionId, token } = scanStateRef.current
+    setScanState({ status: 'confirming' })
+
+    let code: QrErrorCode = 'SYSTEM'
     try {
       const res  = await fetch('/api/admin/checkin/confirm', {
         method:  'POST',
@@ -111,21 +184,16 @@ export default function AdminCheckinPage() {
       if (res.status === 409 && data.alreadyChecked) {
         setScanState({ status: 'already', lockedResult: data.lockedResult, checkedInAt: data.checkedInAt, department: data.department })
       } else if (!res.ok) {
-        if (res.status === 400 || data.errorCode === 'INVALID_QR') {
-          code = 'INVALID_QR'
-        } else if (res.status === 404 || data.errorCode === 'NOT_FOUND') {
-          code = 'NOT_FOUND'
-        } else {
-          code = data.errorCode ?? 'SYSTEM'
-        }
+        if (res.status === 400 || data.errorCode === 'INVALID_QR') code = 'INVALID_QR'
+        else if (res.status === 404 || data.errorCode === 'NOT_FOUND') code = 'NOT_FOUND'
+        else code = data.errorCode ?? 'SYSTEM'
         setScanState({ status: 'error', code, detail: data.error })
-        // Fire-and-forget log – don't block the UI
         fetch('/api/report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             page: 'admin_checkin',
-            description: `QR掃描錯誤 [${code}]: ${rawText.slice(0, 100)}`,
+            description: `QR掃描錯誤 [${code}]: submissionId=${submissionId}`,
             category: 'qr_scan_error',
           }),
         }).catch(() => {})
@@ -136,38 +204,28 @@ export default function AdminCheckinPage() {
     } catch {
       code = 'NETWORK'
       setScanState({ status: 'error', code: 'NETWORK' })
-      // Fire-and-forget log – don't block the UI
-      fetch('/api/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          page: 'admin_checkin',
-          description: `QR掃描錯誤 [${code}]: ${rawText.slice(0, 100)}`,
-          category: 'qr_scan_error',
-        }),
-      }).catch(() => {})
     }
-
-    // Auto-reset after 3.5 s
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
-    resetTimerRef.current = setTimeout(() => {
-      setScanState({ status: 'scanning' })
-      lastUrlRef.current = { url: '', ts: 0 }
-    }, 3500)
+    scheduleReset()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshRecords])
 
-  /* ── Scan loop via setInterval (250 ms = 4 fps, plenty for QR) ── */
+  /* ── Staff taps "取消" on confirm card ── */
+  const handleCancelConfirm = useCallback(() => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+    lastUrlRef.current = { url: '', ts: 0 }
+    setScanState({ status: 'scanning' })
+  }, [])
+
+  /* ── Scan loop via setInterval ── */
   useEffect(() => {
     if (!cameraReady) return
 
     const id = setInterval(() => {
-      // Read from ref – no stale-closure problem
       if (scanStateRef.current.status !== 'scanning') return
 
       const video  = videoRef.current
       const canvas = canvasRef.current
       if (!video || !canvas) return
-      // readyState 4 = HAVE_ENOUGH_DATA – reliable frames
       if (video.readyState !== 4) return
       if (video.videoWidth === 0 || video.videoHeight === 0) return
 
@@ -212,7 +270,12 @@ export default function AdminCheckinPage() {
   const todayStr   = new Date().toISOString().slice(0, 10)
   const todayCount = records.filter(r => r.checked_in_at.slice(0, 10) === todayStr).length
   const s          = scanState.status
-  const borderCol  = s === 'success' ? '#ffd700' : s === 'already' ? '#ffd700' : s === 'error' ? '#ff3366' : '#00ff88'
+  const isConfirmOrConfirming = s === 'confirm' || s === 'confirming'
+  const borderCol  = s === 'success' ? '#ffd700'
+    : s === 'already'                ? '#ffd700'
+    : s === 'error'                  ? '#ff3366'
+    : isConfirmOrConfirming          ? '#00d4ff'
+    :                                  '#00ff88'
 
   return (
     <div className="min-h-screen max-h-screen cyber-grid flex flex-col overflow-hidden">
@@ -232,7 +295,6 @@ export default function AdminCheckinPage() {
           <span className="text-xs font-orbitron" style={{ color: '#ffd700' }}>{todayCount}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {/* Mobile: toggle log */}
           <button
             onClick={() => setShowLog(v => !v)}
             className="sm:hidden text-xs font-orbitron border cyber-chamfer-sm px-2.5 py-1"
@@ -257,7 +319,6 @@ export default function AdminCheckinPage() {
 
           {/* Viewfinder */}
           <div className="relative w-full" style={{ maxWidth: 380 }}>
-            {/* Corner brackets */}
             {(['tl','tr','bl','br'] as const).map(p => (
               <div key={p} className="absolute w-7 h-7 z-20 pointer-events-none qr-corner"
                 style={{
@@ -271,7 +332,6 @@ export default function AdminCheckinPage() {
               />
             ))}
 
-            {/* Video box */}
             <div className="relative overflow-hidden bg-black w-full"
               style={{ aspectRatio: '4/3', border: `1px solid ${borderCol}40` }}>
 
@@ -279,12 +339,9 @@ export default function AdminCheckinPage() {
                 playsInline muted autoPlay />
               <canvas ref={canvasRef} className="hidden" />
 
-              {/* Scan target guide */}
               {(s === 'scanning') && cameraReady && (
                 <>
-                  {/* Dimmed areas outside target */}
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(0,0,0,.35)' }} />
-                  {/* Centre clear box */}
                   <div className="absolute pointer-events-none"
                     style={{
                       top: '20%', left: '20%', right: '20%', bottom: '20%',
@@ -293,22 +350,19 @@ export default function AdminCheckinPage() {
                       background: 'transparent',
                     }}
                   />
-                  {/* Scan beam inside target only */}
                   <div className="absolute qr-scan-beam pointer-events-none"
                     style={{ left: '20%', right: '20%', height: 2 }}
                   />
                 </>
               )}
 
-              {/* Processing */}
-              {s === 'processing' && (
+              {(s === 'processing' || s === 'confirming') && (
                 <div className="absolute inset-0 flex items-center justify-center z-10"
                   style={{ background: 'rgba(10,10,15,.7)' }}>
                   <p className="text-neon text-xs font-orbitron tracking-widest cyber-cursor">驗證中</p>
                 </div>
               )}
 
-              {/* Camera error */}
               {cameraError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-5 text-center"
                   style={{ background: '#0a0a0f' }}>
@@ -318,35 +372,78 @@ export default function AdminCheckinPage() {
               )}
             </div>
 
-            {/* Status bar */}
             <div className="flex items-center justify-center gap-2 mt-2 py-1">
-              <span className={s === 'error' ? 'dot-red' : s === 'success' || s === 'already' ? 'dot-amber' : 'dot-green'}
+              <span className={s === 'error' ? 'dot-red' : s === 'success' || s === 'already' ? 'dot-amber' : isConfirmOrConfirming ? 'dot-green' : 'dot-green'}
                 style={s === 'scanning' ? undefined : { animation: 'none' }} />
               <span className="text-xs font-orbitron tracking-widest"
-                style={{ color: s === 'success' || s === 'already' ? '#ffd700' : s === 'error' ? '#ff3366' : s === 'processing' ? '#00d4ff' : '#6b7280' }}>
-                {s === 'idle'       ? '初始化相機中'
-                :s === 'scanning'   ? '對準 QR Code 進行掃描'
-                :s === 'processing' ? '驗證中...'
-                :s === 'success'    ? '簽到成功！'
-                :s === 'already'    ? '此學生已簽到'
-                :                    '發生錯誤'}
+                style={{ color: s === 'success' || s === 'already' ? '#ffd700' : s === 'error' ? '#ff3366' : s === 'processing' || s === 'confirming' ? '#00d4ff' : isConfirmOrConfirming ? '#00d4ff' : '#6b7280' }}>
+                {s === 'idle'        ? '初始化相機中'
+                :s === 'scanning'    ? '對準 QR Code 進行掃描'
+                :s === 'processing'  ? '讀取學生資料中...'
+                :s === 'confirm'     ? '請確認後完成簽到'
+                :s === 'confirming'  ? '確認簽到中...'
+                :s === 'success'     ? '簽到成功！'
+                :s === 'already'     ? '此學生已簽到'
+                :                     '發生錯誤'}
               </span>
             </div>
           </div>
 
-          {/* Result card */}
-          {(s === 'success' || s === 'already' || s === 'error') && (
+          {/* Result / Confirm card */}
+          {(s === 'confirm' || s === 'success' || s === 'already' || s === 'error') && (
             <div className="w-full terminal-card cyber-chamfer fade-in-up overflow-hidden"
               style={{
                 maxWidth: 380,
-                borderColor: s === 'success' ? 'rgba(255,215,0,.45)' : s === 'already' ? 'rgba(255,215,0,.2)' : 'rgba(255,51,102,.3)',
+                borderColor: s === 'confirm'  ? 'rgba(0,212,255,.45)'
+                  : s === 'success'           ? 'rgba(255,215,0,.45)'
+                  : s === 'already'           ? 'rgba(255,215,0,.2)'
+                  :                             'rgba(255,51,102,.3)',
               }}>
               <div className="h-0.5"
-                style={{ background: s === 'success' ? 'linear-gradient(90deg,transparent,#ffd700,transparent)'
-                  : s === 'already' ? 'linear-gradient(90deg,transparent,#ffd70050,transparent)'
-                  : 'linear-gradient(90deg,transparent,#ff3366,transparent)' }} />
+                style={{ background: s === 'confirm'  ? 'linear-gradient(90deg,transparent,#00d4ff,transparent)'
+                  : s === 'success'                   ? 'linear-gradient(90deg,transparent,#ffd700,transparent)'
+                  : s === 'already'                   ? 'linear-gradient(90deg,transparent,#ffd70050,transparent)'
+                  :                                     'linear-gradient(90deg,transparent,#ff3366,transparent)' }} />
 
-              {s === 'success' && (
+              {s === 'confirm' && scanState.status === 'confirm' && (
+                <div className="p-4 space-y-3">
+                  {/* Student info */}
+                  <div className="flex items-start gap-3">
+                    <ClubIcon category={scanState.lockedResult} size={36} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-orbitron font-black tracking-wider mb-0.5" style={{ color: '#00d4ff' }}>
+                        待確認簽到
+                      </p>
+                      <p className="text-xs font-orbitron mb-0.5" style={{ color: CLUB_COLORS[scanState.lockedResult] ?? '#00ff88' }}>
+                        {scanState.lockedResult}
+                      </p>
+                      <p className="text-dim text-xs truncate">{scanState.department}</p>
+                      <p className="text-xs mt-0.5 font-orbitron" style={{ color: '#4a4a6a' }}>
+                        學號: {scanState.studentId.slice(0,3)}••••{scanState.studentId.slice(-2)}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={handleCancelConfirm}
+                      className="text-xs font-orbitron tracking-wider py-2 cyber-chamfer-sm border transition-colors"
+                      style={{ borderColor: '#ff336640', color: '#ff3366' }}
+                    >
+                      ✕ 取消
+                    </button>
+                    <button
+                      onClick={handleConfirmCheckin}
+                      className="text-xs font-orbitron tracking-wider py-2 cyber-chamfer-sm border transition-colors"
+                      style={{ borderColor: '#00d4ff80', color: '#00d4ff', background: 'rgba(0,212,255,.08)' }}
+                    >
+                      ✓ 確認簽到
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {s === 'success' && scanState.status === 'success' && (
                 <div className="p-4 flex items-center gap-4">
                   <div className="text-4xl shrink-0" style={{ color: '#ffd700', textShadow: '0 0 20px rgba(255,215,0,.6)' }}>✓</div>
                   <div className="flex-1 min-w-0">
@@ -362,7 +459,7 @@ export default function AdminCheckinPage() {
                 </div>
               )}
 
-              {s === 'already' && (
+              {s === 'already' && scanState.status === 'already' && (
                 <div className="p-4 flex items-center gap-4">
                   <div className="text-3xl shrink-0" style={{ color: '#ffd70070' }}>🔒</div>
                   <div className="flex-1 min-w-0">
@@ -411,8 +508,9 @@ export default function AdminCheckinPage() {
                 {records.map((r, idx) => {
                   const col     = CLUB_COLORS[r.locked_result] ?? '#00ff88'
                   const isToday = r.checked_in_at.slice(0, 10) === todayStr
+                  const cancelling = cancellingId === r.id
                   return (
-                    <div key={r.id} className="px-3 py-2.5 flex items-center gap-2.5"
+                    <div key={r.id} className="px-3 py-2.5 flex items-center gap-2"
                       style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,.012)' }}>
                       <ClubIcon category={r.locked_result} size={16} />
                       <div className="flex-1 min-w-0">
@@ -434,6 +532,22 @@ export default function AdminCheckinPage() {
                       <p className="shrink-0 font-orbitron" style={{ color: '#3a3a5a', fontSize: 9 }}>
                         {new Date(r.checked_in_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
                       </p>
+                      {/* Cancel button */}
+                      <button
+                        onClick={() => handleCancel(r.id)}
+                        disabled={cancelling}
+                        title="取消簽到"
+                        className="shrink-0 w-5 h-5 flex items-center justify-center rounded-sm transition-colors"
+                        style={{
+                          color: cancelling ? '#3a3a5a' : '#ff336660',
+                          fontSize: 10,
+                          border: '1px solid currentColor',
+                        }}
+                        onMouseEnter={e => { if (!cancelling) (e.currentTarget as HTMLButtonElement).style.color = '#ff3366' }}
+                        onMouseLeave={e => { if (!cancelling) (e.currentTarget as HTMLButtonElement).style.color = '#ff336660' }}
+                      >
+                        {cancelling ? '…' : '✕'}
+                      </button>
                     </div>
                   )
                 })}

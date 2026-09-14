@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, Legend, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -165,15 +165,57 @@ function exportCheckinCSV(rows: CheckinRow[]) {
   URL.revokeObjectURL(url)
 }
 
+const GRADE_OPTIONS = ['大一', '大二', '大三', '大四', '大五', '大六']
+const RESULT_OPTIONS = Object.keys(CLUB_COLORS)
+
 /* ─── Main component ─────────────────────────────────── */
 export default function DashboardCharts({
   total, todayCount, topClub, deptCount,
   clubDist, dailyTrend, topDepts, gradeDist, divisionDist, recentRows,
-  checkinCount, todayCheckinCount, checkinRows,
+  checkinCount, todayCheckinCount, checkinRows: initialCheckinRows,
 }: DashboardData) {
   const [showAll, setShowAll]             = useState(false)
   const [showAllCheckins, setShowAllCheckins] = useState(false)
-  const tableRows    = showAll ? recentRows : recentRows.slice(0, 20)
+  const [cancellingId, setCancellingId]   = useState<string | null>(null)
+  const [cancelledIds, setCancelledIds]   = useState<Set<string>>(new Set())
+
+  // Test records filters
+  const [filterSearch, setFilterSearch]   = useState('')
+  const [filterGrade, setFilterGrade]     = useState('')
+  const [filterResult, setFilterResult]   = useState('')
+
+  const checkinRows = initialCheckinRows.filter(r => !cancelledIds.has(r.id))
+
+  const handleCancelCheckin = useCallback(async (checkinId: string) => {
+    setCancellingId(checkinId)
+    try {
+      const res = await fetch('/api/admin/checkin/cancel', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkinId }),
+      })
+      if (res.ok) setCancelledIds(prev => new Set([...prev, checkinId]))
+    } catch { /* ignore */ }
+    setCancellingId(null)
+  }, [])
+
+  // Apply test records filters
+  const filteredRows = recentRows.filter(r => {
+    if (filterGrade  && r.grade   !== filterGrade)  return false
+    if (filterResult && r.result  !== filterResult) return false
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase()
+      if (
+        !r.student_id.toLowerCase().includes(q) &&
+        !r.dept.toLowerCase().includes(q) &&
+        !r.division.toLowerCase().includes(q) &&
+        !r.result.toLowerCase().includes(q)
+      ) return false
+    }
+    return true
+  })
+
+  const tableRows    = showAll ? filteredRows : filteredRows.slice(0, 20)
   const checkinTable = showAllCheckins ? checkinRows : checkinRows.slice(0, 20)
 
   return (
@@ -340,26 +382,63 @@ export default function DashboardCharts({
 
       {/* ── 測驗紀錄明細 ── */}
       <SectionCard
-        title={`測驗紀錄明細（共 ${recentRows.length} 筆）`}
+        title={`測驗紀錄明細（${filteredRows.length} / ${recentRows.length} 筆）`}
         dot="#9966ff"
         action={
           <button
-            onClick={() => exportCSV(recentRows)}
+            onClick={() => exportCSV(filteredRows)}
             className="text-xs font-orbitron tracking-wider px-3 py-1 cyber-chamfer-sm transition-colors"
             style={{ border: '1px solid #9966ff', color: '#9966ff' }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = '#9966ff20'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#9966ff20' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
             ↓ 匯出 CSV
           </button>
         }
       >
-        {recentRows.length === 0 ? (
-          <p className="text-dim text-xs font-orbitron cyber-cursor tracking-widest">尚無測驗紀錄</p>
+        {/* Filter bar */}
+        <div className="flex flex-wrap gap-2 mb-4 pb-4" style={{ borderBottom: '1px solid #1a1a2a' }}>
+          <input
+            type="text"
+            placeholder="搜尋學號、系所、屬性..."
+            value={filterSearch}
+            onChange={e => { setFilterSearch(e.target.value); setShowAll(false) }}
+            className="cyber-input cyber-chamfer-sm text-xs flex-1 min-w-[160px]"
+            style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+          />
+          <select
+            value={filterGrade}
+            onChange={e => { setFilterGrade(e.target.value); setShowAll(false) }}
+            className="cyber-input cyber-chamfer-sm text-xs"
+            style={{ height: 30, padding: '0 8px', fontSize: 11, minWidth: 80 }}
+          >
+            <option value="">全部年級</option>
+            {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <select
+            value={filterResult}
+            onChange={e => { setFilterResult(e.target.value); setShowAll(false) }}
+            className="cyber-input cyber-chamfer-sm text-xs"
+            style={{ height: 30, padding: '0 8px', fontSize: 11, minWidth: 110 }}
+          >
+            <option value="">全部屬性</option>
+            {RESULT_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {(filterSearch || filterGrade || filterResult) && (
+            <button
+              onClick={() => { setFilterSearch(''); setFilterGrade(''); setFilterResult('') }}
+              className="text-xs font-orbitron px-2.5 py-1 cyber-chamfer-sm"
+              style={{ border: '1px solid #3a3a5a', color: '#6a6a8a' }}
+            >
+              ✕ 清除
+            </button>
+          )}
+        </div>
+
+        {filteredRows.length === 0 ? (
+          <p className="text-dim text-xs font-orbitron cyber-cursor tracking-widest">
+            {recentRows.length === 0 ? '尚無測驗紀錄' : '無符合條件的紀錄'}
+          </p>
         ) : (
           <>
             <div className="overflow-x-auto -mx-6 px-6">
@@ -403,14 +482,14 @@ export default function DashboardCharts({
                 </tbody>
               </table>
             </div>
-            {recentRows.length > 20 && (
+            {filteredRows.length > 20 && (
               <div className="text-center mt-4">
                 <button
                   onClick={() => setShowAll(v => !v)}
                   className="text-xs font-orbitron tracking-wider px-4 py-1.5 cyber-chamfer-sm"
                   style={{ border: '1px solid #3a3a5a', color: '#6a6a8a' }}
                 >
-                  {showAll ? '▲ 收合' : `▼ 顯示全部 ${recentRows.length} 筆`}
+                  {showAll ? '▲ 收合' : `▼ 顯示全部 ${filteredRows.length} 筆`}
                 </button>
               </div>
             )}
@@ -453,7 +532,7 @@ export default function DashboardCharts({
               <table className="w-full text-xs min-w-[600px]">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #2a2a3a' }}>
-                    {['學號', '系所', '鎖定結果', '簽到時間', '掃描工作人員'].map(h => (
+                    {['學號', '系所', '鎖定結果', '簽到時間', '掃描工作人員', ''].map(h => (
                       <th key={h} className="px-4 py-3 text-left font-orbitron uppercase tracking-[.12em]"
                         style={{ color: '#4a4a6a', fontSize: 10 }}>
                         {h}
@@ -465,6 +544,7 @@ export default function DashboardCharts({
                   {checkinTable.map((r, idx) => {
                     const col = CLUB_COLORS[r.locked_result] ?? '#ffd700'
                     const todayStr2 = new Date().toISOString().slice(0, 10)
+                    const cancelling = cancellingId === r.id
                     return (
                       <tr key={r.id}
                         style={{
@@ -489,6 +569,18 @@ export default function DashboardCharts({
                         </td>
                         <td className="px-4 py-2.5" style={{ color: '#4a4a6a', fontSize: 10 }}>
                           {r.scanned_by ?? '—'}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <button
+                            onClick={() => handleCancelCheckin(r.id)}
+                            disabled={cancelling}
+                            className="text-xs font-orbitron px-2 py-0.5 cyber-chamfer-sm transition-colors"
+                            style={{ border: '1px solid #ff336640', color: cancelling ? '#3a3a5a' : '#ff336680' }}
+                            onMouseEnter={e => { if (!cancelling) (e.currentTarget as HTMLButtonElement).style.color = '#ff3366' }}
+                            onMouseLeave={e => { if (!cancelling) (e.currentTarget as HTMLButtonElement).style.color = '#ff336680' }}
+                          >
+                            {cancelling ? '…' : '取消'}
+                          </button>
                         </td>
                       </tr>
                     )
