@@ -78,7 +78,7 @@ export default function CheckinQR({ submissionId, currentResult }: Props) {
       </button>
 
       {expanded && (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <div className="w-2 h-2 bg-neon rounded-full neon-pulse" />

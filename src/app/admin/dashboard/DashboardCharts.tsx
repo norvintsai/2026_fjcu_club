@@ -108,7 +108,7 @@ function SectionCard({ title, dot = '#00ff88', children, action }: {
         <span className="ml-3 text-xs font-orbitron uppercase tracking-widest text-dim flex-1">{title}</span>
         {action}
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </div>
   )
 }
@@ -441,7 +441,7 @@ export default function DashboardCharts({
           </p>
         ) : (
           <>
-            <div className="overflow-x-auto -mx-6 px-6">
+            <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
               <table className="w-full text-xs min-w-[640px]">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #2a2a3a' }}>
@@ -528,7 +528,7 @@ export default function DashboardCharts({
           <p className="text-dim text-xs font-orbitron cyber-cursor tracking-widest">尚無簽到紀錄</p>
         ) : (
           <>
-            <div className="overflow-x-auto -mx-6 px-6">
+            <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
               <table className="w-full text-xs min-w-[600px]">
                 <thead>
                   <tr style={{ borderBottom: '1px solid #2a2a3a' }}>

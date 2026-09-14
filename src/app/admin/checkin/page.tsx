@@ -315,7 +315,8 @@ export default function AdminCheckinPage() {
       <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
 
         {/* ── Camera panel ── */}
-        <div className={`flex-1 flex flex-col items-center justify-center p-3 gap-3 ${showLog ? 'hidden sm:flex' : 'flex'}`}>
+        <div className={`flex-1 overflow-y-auto min-h-0 flex-col ${showLog ? 'hidden sm:flex' : 'flex'}`}>
+        <div className="flex-1 flex flex-col items-center justify-center p-3 gap-3">
 
           {/* Viewfinder */}
           <div className="relative w-full" style={{ maxWidth: 380 }}>
@@ -493,6 +494,7 @@ export default function AdminCheckinPage() {
               )}
             </div>
           )}
+        </div>
         </div>
 
         {/* ── Records panel ── */}

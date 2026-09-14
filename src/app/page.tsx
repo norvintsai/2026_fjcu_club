@@ -64,7 +64,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen cyber-grid flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <main className="min-h-screen cyber-grid flex items-center justify-center px-4 py-6 sm:py-12 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-96 h-96 pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,255,136,.06) 0%, transparent 70%)' }} />
       <div className="absolute bottom-0 right-0 w-96 h-96 pointer-events-none"
@@ -90,7 +90,7 @@ export default function HomePage() {
           </div>
 
           {/* Cockpit instrument strip */}
-          <div className="flex flex-wrap items-center gap-0 px-5 py-2.5 border-b border-border overflow-hidden">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-2.5 border-b border-border overflow-hidden">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 flex-wrap">
               {/* Engine output */}
               <div className="flex flex-col gap-0.5 min-w-[72px]">
@@ -106,7 +106,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="w-px h-6 bg-border shrink-0" />
+              <div className="hidden sm:block w-px h-6 bg-border shrink-0" />
 
               {/* Shield */}
               <div className="flex flex-col gap-0.5 min-w-[72px]">
@@ -122,7 +122,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="w-px h-6 bg-border shrink-0" />
+              <div className="hidden sm:block w-px h-6 bg-border shrink-0" />
 
               {/* Nav coordinates */}
               <div className="flex flex-col gap-0.5">
@@ -290,7 +290,7 @@ export default function HomePage() {
                       onCancel={() => setEditingDept(false)}
                     />
                   ) : (
-                    <div className="px-4 py-4 grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 text-xs font-orbitron">
+                    <div className="px-4 py-4 grid grid-cols-[5rem_1fr] gap-x-4 gap-y-3 text-xs font-orbitron">
                       <span className="text-dim tracking-wider">部別</span>
                       <span className="text-fore">{parsed.division}</span>
                       <span className="text-dim tracking-wider">系所</span>

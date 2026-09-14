@@ -361,6 +361,11 @@ body::after {
   filter: drop-shadow(0 0 12px rgba(0,255,136,.25));
 }
 
+/* Prevent iOS Safari auto-zoom when focusing inputs smaller than 16 px */
+@media (hover: none) and (pointer: coarse) {
+  input, textarea, select { font-size: 16px; }
+}
+
 /* @media reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .cyber-glitch,

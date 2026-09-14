@@ -145,7 +145,7 @@ function TestContent() {
             </span>
           </div>
 
-          <div className="p-6 md:p-8 relative z-10">
+          <div className="p-5 sm:p-7 relative z-10">
             {/* 題目 */}
             <p className="text-fore text-base md:text-lg leading-relaxed mb-8">
               <span className="text-cyan text-xs font-orbitron mr-2 opacity-60">
@@ -162,7 +162,7 @@ function TestContent() {
                   <button
                     key={option.label}
                     onClick={() => selectOption(option.label)}
-                    className="w-full text-left flex items-start gap-4 px-5 py-4 cyber-chamfer-sm border transition-all duration-150"
+                    className="w-full text-left flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 cyber-chamfer-sm border transition-all duration-150"
                     style={{
                       background: isSelected ? 'rgba(0,255,136,.08)' : '#0a0a0f',
                       borderColor: isSelected ? '#00ff88' : '#2a2a3a',
