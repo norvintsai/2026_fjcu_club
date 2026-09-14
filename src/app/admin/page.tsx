@@ -146,9 +146,10 @@ export default function AdminLoginPage() {
   }
 
   /* ── Step 3: Set PIN ── */
-  async function handleSetPin() {
+  async function handleSetPin(cfmValue?: string) {
+    const cfm = cfmValue ?? cfmPin
     if (newPin.length !== 6) return
-    if (newPin !== cfmPin) {
+    if (newPin !== cfm) {
       setPinSetStatus('error')
       setTimeout(() => { setPinCfmRef.current?.clear(); setCfmPin(''); setPinSetStatus('idle') }, 1400)
       setError('兩次輸入的密碼不一致')
@@ -233,9 +234,10 @@ export default function AdminLoginPage() {
   }
 
   /* ── Forced PIN change after initial login ── */
-  async function handleChangePin() {
+  async function handleChangePin(cfmValue?: string) {
+    const cfm = cfmValue ?? changePinCfm
     if (changePin.length !== 6) return
-    if (changePin !== changePinCfm) {
+    if (changePin !== cfm) {
       setChangePinStatus('error')
       setTimeout(() => { changePinCfmRef.current?.clear(); setChangePinCfm(''); setChangePinStatus('idle') }, 1400)
       setError('兩次輸入的密碼不一致')
